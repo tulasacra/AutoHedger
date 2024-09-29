@@ -30,12 +30,11 @@ class Program
 
     static async Task Main(string[] args)
     {
-        timer = new Timer(900000); // 15 minutes in milliseconds
+        timer = new Timer(TimeSpan.FromMinutes(15));
         timer.Elapsed += async (sender, e) => await CheckPremiums();
         timer.AutoReset = true;
         timer.Enabled = true;
 
-        // Run CheckPremiums immediately after starting
         await CheckPremiums();
         Console.ReadLine();
     }
