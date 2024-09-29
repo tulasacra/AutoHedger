@@ -21,7 +21,7 @@ public static class OracleKeys
 
 class Program
 {
-    private const string currency = OracleKeys.BTC;
+    private const string currency = OracleKeys.USD;
     private const double minimumApy = 5;
 
     
@@ -43,55 +43,60 @@ class Program
     private static async Task CheckPremiums()
     {
         Console.Clear();
-        Console.WriteLine($"Checking premiums at: {DateTime.Now}");
+        Console.WriteLine($"Checking at: {DateTime.Now}");
         Console.WriteLine("----------------------------------------");
 
-        try
+        string url = "https://premiums.anyhedge.com/api/v2/currentPremiumsV2";
+        HttpResponseMessage response = await client.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+        string responseBody = await response.Content.ReadAsStringAsync();
+
+        var options = new JsonSerializerOptions
         {
-            string url = "https://premiums.anyhedge.com/api/v2/currentPremiumsV2";
-            HttpResponseMessage response = await client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            string responseBody = await response.Content.ReadAsStringAsync();
+            PropertyNameCaseInsensitive = true
+        };
 
-            var options = new JsonSerializerOptions
+        var premiumData = JsonSerializer.Deserialize<Dictionary<string, CurrencyData>>(responseBody, options);
+
+        if (premiumData.TryGetValue(currency, out var usdData))
+        {
+            // Fetch the latest price
+            decimal? latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currency);
+            if (latestPrice.HasValue)
             {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var premiumData = JsonSerializer.Deserialize<Dictionary<string, CurrencyData>>(responseBody, options);
-
-            if (premiumData.TryGetValue(currency, out var usdData))
+                Console.WriteLine($"Latest price from OraclesCash: {latestPrice.Value}");
+                Console.WriteLine();
+            }
+            else
             {
-                Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) | Status |");
-                Console.WriteLine("|--------------|-----------------|-------------|---------|--------|");
+                Console.WriteLine($"Could not fetch the latest price for {currency}");
+            }
 
-                foreach (var (userAmount, leverageData) in usdData.TakerHedge)
+            Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) | Status |");
+            Console.WriteLine("|--------------|-----------------|-------------|---------|--------|");
+
+            foreach (var (userAmount, leverageData) in usdData.TakerHedge)
+            {
+                foreach (var (leverage, counterLeverageData) in leverageData)
                 {
-                    foreach (var (leverage, counterLeverageData) in leverageData)
+                    foreach (var (counterLeverage, durationData) in counterLeverageData)
                     {
-                        foreach (var (counterLeverage, durationData) in counterLeverageData)
-                        {
-                            //only check 20% hedge
-                            if (counterLeverage != "5") continue;
+                        //only check 20% hedge
+                        if (counterLeverage != "5") continue;
                             
-                            foreach (var (duration, premiumInfo) in durationData)
-                            {
-                                if (premiumInfo.Total >= 0) continue;
+                        foreach (var (duration, premiumInfo) in durationData)
+                        {
+                            if (premiumInfo.Total >= 0) continue;
 
-                                double durationInDays = int.Parse(duration) / 86400.0; // Convert seconds to days
-                                double yield = premiumInfo.Total / -100;
-                                double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100; // Calculate APY
-                                string status = apy >= minimumApy ? "OK" : "";
-                                Console.WriteLine($"| {userAmount,-12} | {durationInDays,-15:F2} | {premiumInfo.Total,-11:F2} | {apy,-7:F2} | {status,-6} |");
-                            }
+                            double durationInDays = int.Parse(duration) / 86400.0; // Convert seconds to days
+                            double yield = premiumInfo.Total / -100;
+                            double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100; // Calculate APY
+                            string status = apy >= minimumApy ? "OK" : "";
+                            Console.WriteLine($"| {userAmount,-12} | {durationInDays,-15:F2} | {premiumInfo.Total,-11:F2} | {apy,-7:F2} | {status,-6} |");
                         }
                     }
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Error: {e.Message}");
         }
 
         Console.WriteLine("----------------------------------------");

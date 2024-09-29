@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoHedger", "AutoHedger\AutoHedger.csproj", "{B9AF15B9-5094-416B-892E-CE7A3EE7FF17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OraclesCash", "OraclesCash\OraclesCash.csproj", "{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{B9AF15B9-5094-416B-892E-CE7A3EE7FF17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9AF15B9-5094-416B-892E-CE7A3EE7FF17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9AF15B9-5094-416B-892E-CE7A3EE7FF17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
