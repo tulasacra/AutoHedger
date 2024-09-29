@@ -62,15 +62,8 @@ class Program
         {
             // Fetch the latest price
             decimal? latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currency);
-            if (latestPrice.HasValue)
-            {
-                Console.WriteLine($"Latest price from OraclesCash: {latestPrice.Value}");
-                Console.WriteLine();
-            }
-            else
-            {
-                Console.WriteLine($"Could not fetch the latest price for {currency}");
-            }
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice.Value}");
+            Console.WriteLine();
 
             Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) | Status |");
             Console.WriteLine("|--------------|-----------------|-------------|---------|--------|");

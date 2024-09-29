@@ -13,18 +13,16 @@ public static partial class OraclesCash
 
         var oracleMetadata = await response.Content.ReadFromJsonAsync<OracleMetadataResponse>();
 
-        if (oracleMetadata != null && oracleMetadata.OracleMetadata != null && oracleMetadata.OracleMetadata.Count == 15)
-        {
-            var metadata = new OracleMetadata();
-            foreach (var message in oracleMetadata.OracleMetadata)
-            {
-                metadata.ParseMessage(message);
-            }
+        if (oracleMetadata == null || oracleMetadata.OracleMetadata == null || oracleMetadata.OracleMetadata.Count != 15)
+            throw new ApplicationException($"Error fetching metadata: {oracleMetadata}");
 
-            return metadata;
+        var metadata = new OracleMetadata();
+        foreach (var message in oracleMetadata.OracleMetadata)
+        {
+            metadata.ParseMessage(message);
         }
 
-        throw new ApplicationException($"Error fetching metadata: {oracleMetadata}");
+        return metadata;
     }
 
     class OracleMetadataResponse
