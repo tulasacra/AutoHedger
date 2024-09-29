@@ -146,7 +146,7 @@ public static partial class OraclesCash
 
         private static ParsedMessage ParseMessage(string hexString)
         {
-            byte[] bytes = StringToByteArray(hexString);
+            byte[] bytes = Convert.FromHexString(hexString);
 
             int index = 0;
 
@@ -166,7 +166,7 @@ public static partial class OraclesCash
             string content = Encoding.UTF8.GetString(bytes, index, bytes.Length - index);
 
             // Convert timestamp to DateTime
-            DateTime dateTime = UnixTimeStampToDateTime(timestamp);
+            DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
 
             return new ParsedMessage
             {
