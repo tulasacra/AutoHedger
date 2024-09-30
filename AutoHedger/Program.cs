@@ -4,9 +4,9 @@ namespace AutoHedger
 {
     class Program
     {
-        private const string currency = OracleKeys.BTC;
-        private const double minimumApy = 5;
         private const decimal bchAcquisitionCostFifo = 0.00571983m; //todo calculate
+        
+        private static readonly string currencyOracleKey = OracleKeys.Keys[AppSettings.Currency];
 
         private static Timer timer;
 
@@ -28,8 +28,8 @@ namespace AutoHedger
             Console.WriteLine("----------------------------------------");
 
             const string counterLeverage = "5"; //only check 20% hedge
-            var premiumData = await Premiums.GetPremiums(currency, counterLeverage);
-            decimal latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currency);
+            var premiumData = await Premiums.GetPremiums(currencyOracleKey, counterLeverage);
+            decimal latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currencyOracleKey);
             
             
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo, 19:F8}");
@@ -56,7 +56,7 @@ namespace AutoHedger
                 double durationInDays = int.Parse(item.Duration) / 86400.0;
                 double yield = item.PremiumInfo.Total / -100;
                 double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
-                string status = apy >= minimumApy ? "OK" : "";
+                string status = apy >= AppSettings.MinimumApy ? "OK" : "";
                 Console.WriteLine($"| {item.Amount,12} | {durationInDays,15} | {item.PremiumInfo.Total,11:F2} | {apy,7:F2} | {status,-6} |");
             }
         }
