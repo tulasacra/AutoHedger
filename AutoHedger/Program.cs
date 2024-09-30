@@ -4,8 +4,9 @@ namespace AutoHedger
 {
     class Program
     {
-        private const string currency = OracleKeys.USD;
+        private const string currency = OracleKeys.BTC;
         private const double minimumApy = 5;
+        private const decimal bchAcquisitionCostFifo = 0.00571983m; //todo calculate
 
         private static Timer timer;
 
@@ -28,7 +29,14 @@ namespace AutoHedger
 
             const string counterLeverage = "5"; //only check 20% hedge
             var premiumData = await Premiums.GetPremiums(currency, counterLeverage);
-            decimal? latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currency);
+            decimal latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currency);
+            
+            
+            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo, 19:F8}");
+            var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
+            string status = priceDelta >= 0 ? "OK" : "";
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice, 15:F8} ({priceDelta:+0.00;-0.00;+0.00} %) {status}");
+            Console.WriteLine();
 
             DisplayPremiumData(premiumData, latestPrice);
 
@@ -36,11 +44,8 @@ namespace AutoHedger
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
-        private static void DisplayPremiumData(List<PremiumDataItem> premiumData, decimal? latestPrice)
+        private static void DisplayPremiumData(List<PremiumDataItem> premiumData, decimal priceDelta)
         {
-            Console.WriteLine($"Latest price from OraclesCash: {latestPrice.Value}");
-            Console.WriteLine();
-
             Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) | Status |");
             Console.WriteLine("|--------------|-----------------|-------------|---------|--------|");
 
@@ -52,7 +57,7 @@ namespace AutoHedger
                 double yield = item.PremiumInfo.Total / -100;
                 double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
                 string status = apy >= minimumApy ? "OK" : "";
-                Console.WriteLine($"| {item.Amount,-12} | {durationInDays,-15:F2} | {item.PremiumInfo.Total,-11:F2} | {apy,-7:F2} | {status,-6} |");
+                Console.WriteLine($"| {item.Amount,12} | {durationInDays,15} | {item.PremiumInfo.Total,11:F2} | {apy,7:F2} | {status,-6} |");
             }
         }
     }
