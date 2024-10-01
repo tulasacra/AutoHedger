@@ -1,4 +1,5 @@
-﻿using Timer = System.Timers.Timer;
+﻿using BitcoinCash;
+using Timer = System.Timers.Timer;
 
 namespace AutoHedger
 {
@@ -13,19 +14,20 @@ namespace AutoHedger
         static async Task Main(string[] args)
         {
             timer = new Timer(TimeSpan.FromMinutes(15));
-            timer.Elapsed += async (sender, e) => await CheckPremiums();
+            timer.Elapsed += async (sender, e) => await DisplayData();
             timer.AutoReset = true;
             timer.Enabled = true;
 
-            await CheckPremiums();
+            await DisplayData();
             Console.ReadLine();
         }
 
-        private static async Task CheckPremiums()
+        private static async Task DisplayData()
         {
+            const string delimiter = "--------------------------------------------------------------------------------";
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
-            Console.WriteLine("----------------------------------------");
+            Console.WriteLine(delimiter);
 
             const string counterLeverage = "5"; //only check 20% hedge
             var premiumData = await Premiums.GetPremiums(currencyOracleKey, counterLeverage);
@@ -36,15 +38,32 @@ namespace AutoHedger
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
             string status = priceDelta >= 0 ? "OK" : "";
             Console.WriteLine($"Latest price from OraclesCash: {latestPrice, 15:F8} ({priceDelta:+0.00;-0.00;+0.00} %) {status}");
-            Console.WriteLine();
+            Console.WriteLine(delimiter);
 
-            DisplayPremiumData(premiumData, latestPrice);
+            
+            try
+            {
+                var bchClient = new BitcoinCashClient();
+                // var anyhedgeWallet = bchClient.GetWallet(AppSettings.AccountKey);
+                //todo  anyhedgeWallet.transactions
+                decimal walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() {AppSettings.WalletAddress}).First().Value / 100_000_000;
+                decimal walletBalance = walletBalanceBch * latestPrice;
+                Console.WriteLine($"Wallet balance: {walletBalanceBch, 20:F8} BCH {walletBalance, 20:F8} {AppSettings.Currency}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting wallet balance: {ex.Message}");
+            }
 
-            Console.WriteLine("----------------------------------------");
+
+            Console.WriteLine(delimiter);
+            DisplayPremiumsData(premiumData, latestPrice);
+
+            Console.WriteLine(delimiter);
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
-        private static void DisplayPremiumData(List<PremiumDataItem> premiumData, decimal priceDelta)
+        private static void DisplayPremiumsData(List<PremiumDataItem> premiumData, decimal priceDelta)
         {
             Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) | Status |");
             Console.WriteLine("|--------------|-----------------|-------------|---------|--------|");
