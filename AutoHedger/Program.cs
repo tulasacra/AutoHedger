@@ -30,7 +30,7 @@ namespace AutoHedger
             Console.WriteLine(delimiter);
 
             const string counterLeverage = "5"; //only check 20% hedge
-            var premiumData = await Premiums.GetPremiums(currencyOracleKey, counterLeverage);
+            var premiumData = await Premiums.GetPremiums(currencyOracleKey, counterLeverage, 0);
             decimal latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currencyOracleKey);
             
             
@@ -40,14 +40,15 @@ namespace AutoHedger
             Console.WriteLine($"Latest price from OraclesCash: {latestPrice, 15:F8} ({priceDelta:+0.00;-0.00;+0.00} %) {status}");
             Console.WriteLine(delimiter);
 
-            
+
+            decimal? walletBalanceBch = null;
             try
             {
                 var bchClient = new BitcoinCashClient();
                 // var anyhedgeWallet = bchClient.GetWallet(AppSettings.AccountKey);
                 //todo  anyhedgeWallet.transactions
-                decimal walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() {AppSettings.WalletAddress}).First().Value / 100_000_000;
-                decimal walletBalance = walletBalanceBch * latestPrice;
+                walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() {AppSettings.WalletAddress}).First().Value / 100_000_000;
+                decimal walletBalance = walletBalanceBch.Value * latestPrice;
                 Console.WriteLine($"Wallet balance: {walletBalanceBch, 20:F8} BCH {walletBalance, 20:F8} {AppSettings.Currency}");
             }
             catch (Exception ex)
@@ -58,6 +59,16 @@ namespace AutoHedger
 
             Console.WriteLine(delimiter);
             DisplayPremiumsData(premiumData, latestPrice);
+
+            if (walletBalanceBch.HasValue)
+            {
+                var bestContractParameters = GetBestContractParameters(premiumData, walletBalanceBch.Value);
+                if (bestContractParameters.HasValue)
+                {
+                    Console.WriteLine(delimiter);
+                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
+                }
+            }
 
             Console.WriteLine(delimiter);
             Console.WriteLine("Press [Enter] to exit the program.");
@@ -70,14 +81,33 @@ namespace AutoHedger
 
             foreach (var item in premiumData)
             {
-                if (item.PremiumInfo.Total >= 0) continue;
+                string status = item.Apy >= AppSettings.MinimumApy ? "OK" : "";
 
-                double durationInDays = int.Parse(item.Duration) / 86400.0;
-                double yield = item.PremiumInfo.Total / -100;
-                double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
-                string status = apy >= AppSettings.MinimumApy ? "OK" : "";
-                Console.WriteLine($"| {item.Amount,12} | {durationInDays,15} | {item.PremiumInfo.Total,11:F2} | {apy,7:F2} | {status,-6} |");
+                Console.WriteLine($"| {item.Amount,12} | {item.Duration,15} | {item.PremiumInfo.Total,11:F2} | {item.Apy,7:F2} | {status,-6} |");
             }
+        }
+
+        private static (decimal amount, double duration)? GetBestContractParameters(List<PremiumDataItem> premiumData, decimal walletBalanceBch)
+        {
+            var candidates = premiumData
+                .Where(x => x.Apy >= AppSettings.MinimumApy)
+                .GroupBy(x=>x.Amount)
+                .ToList();
+
+            if (!candidates.Any())
+            {
+                return null;
+            }
+
+            var candidatesThatFitWholeBalance = candidates.Where(x => x.Key >= walletBalanceBch).ToList();
+            if (candidatesThatFitWholeBalance.Any())
+            {
+                var bestDuration = candidatesThatFitWholeBalance.OrderBy(x => x.Key).First().OrderBy(x=>x.Apy).Last().Duration;
+                return (walletBalanceBch, bestDuration);
+            }
+
+            var bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Apy).Last();
+            return (bestCandidate.Amount, bestCandidate.Duration);
         }
     }
 }

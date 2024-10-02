@@ -7,7 +7,7 @@ namespace AutoHedger
     {
         private static readonly HttpClient client = new HttpClient();
 
-        public static async Task<List<PremiumDataItem>> GetPremiums(string currency, string counterLeverage)
+        public static async Task<List<PremiumDataItem>> GetPremiums(string currency, string counterLeverage, double maximumPremium)
         {
             string url = "https://premiums.anyhedge.com/api/v2/currentPremiumsV2";
             HttpResponseMessage response = await client.GetAsync(url);
@@ -23,20 +23,42 @@ namespace AutoHedger
 
             if (allData.TryGetValue(currency, out var currencyData))
             {
-                return currencyData.TakerHedge
+                var premiumDataItems = currencyData.TakerHedge
                     .SelectMany(amount => amount.Value
                         .SelectMany(leverage => leverage.Value
                             .Where(cl => cl.Key == counterLeverage)
                             .SelectMany(cl => cl.Value
-                                .Select(duration => new PremiumDataItem
+                                .Where(x=>x.Value.Total<=maximumPremium)
+                                .Select(duration => 
                                 {
-                                    Amount = amount.Key,
-                                    Leverage = leverage.Key,
-                                    CounterLeverage = cl.Key,
-                                    Duration = duration.Key,
-                                    PremiumInfo = duration.Value
+                                    double durationInSeconds = double.Parse(duration.Key);
+                                    double durationInDays = durationInSeconds / 86400.0;
+                                    double yield = duration.Value.Total / -100;
+                                    double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
+
+                                    return new PremiumDataItem
+                                    {
+                                        Amount = decimal.Parse(amount.Key),
+                                        Leverage = double.Parse(leverage.Key),
+                                        CounterLeverage = double.Parse(cl.Key),
+                                        Duration = durationInDays,
+                                        PremiumInfo = duration.Value,
+                                        Apy = apy
+                                    };
                                 }))))
                     .ToList();
+
+                var bestApyForAmount = premiumDataItems
+                    .GroupBy(item => item.Amount)
+                    .Select(group => group.OrderByDescending(item => item.Apy).First())
+                    .ToDictionary(item => item.Amount, item => item.Apy);
+
+                foreach (var item in premiumDataItems)
+                {
+                    item.BestApyForAmount = item.Apy == bestApyForAmount[item.Amount];
+                }
+
+                return premiumDataItems;
             }
 
             return new List<PremiumDataItem>();
@@ -72,11 +94,13 @@ namespace AutoHedger
 
     public class PremiumDataItem
     {
-        public string Amount { get; set; }
-        public string Leverage { get; set; }
-        public string CounterLeverage { get; set; }
-        public string Duration { get; set; }
-        public PremiumData PremiumInfo { get; set; }
+        public decimal Amount;
+        public double Leverage;
+        public double CounterLeverage;
+        public double Duration;
+        public PremiumData PremiumInfo;
+        public double Apy;
+        public bool BestApyForAmount;
     }
 
     public class CurrencyData
