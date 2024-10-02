@@ -65,7 +65,11 @@ namespace AutoHedger
                 var premiumData = (await Premiums.GetPremiums(currencyOracleKey, counterLeverage, 0))
                     .Where(x => x.Apy >= AppSettings.MinimumApy)
                     .ToList();
-                DisplayPremiumsData(premiumData);
+                //Console.WriteLine("Sorted by amount:");
+                //DisplayPremiumsData(premiumData);
+                //Console.WriteLine("Sorted by duration:");
+                var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
+                DisplayPremiumsData(premiumDataByDuration);
 
                 if (walletBalanceBch.HasValue && premiumData.Any())
                 {
