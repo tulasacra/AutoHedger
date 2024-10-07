@@ -28,7 +28,7 @@ namespace AutoHedger
 
         private static async Task DisplayData()
         {
-            const string delimiter = "--------------------------------------------------------------------------------";
+            const string delimiter = "----------------------------------------------------------------------------------------------------";
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
@@ -42,10 +42,9 @@ namespace AutoHedger
                 decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, oracleMetadata);
 
 
-                Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,19:F8}");
+                Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
                 var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-                string status = priceDelta >= 0 ? "OK" : "";
-                Console.WriteLine($"Latest price from OraclesCash: {latestPrice,15:F8} ({priceDelta:+0.00;-0.00;+0.00} %) {status}");
+                Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
                 Console.WriteLine(delimiter);
 
 
@@ -69,7 +68,9 @@ namespace AutoHedger
                     var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
                     var contractAddresses = await anyHedge.GetContractAddresses();
                     var contracts = await anyHedge.GetContracts(contractAddresses);
-                    var activeContracts = contracts.Where(x=> x.Fundings[0].Settlement == null).ToList();
+                    var activeContracts = contracts
+                        .Where(x=>x.Parameters.OraclePublicKey == currencyOracleKey)
+                        .Where(x=> x.Fundings[0].Settlement == null).ToList();
                     contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
                     contractsBalanceBch = contractsBalance / latestPrice;
                 }
@@ -78,7 +79,7 @@ namespace AutoHedger
                     Console.WriteLine($"Error getting contract balance: {ex.Message}");
                 }
                 
-                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance);
+                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata);
 
 
                 Console.WriteLine(delimiter);
@@ -110,20 +111,36 @@ namespace AutoHedger
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
-        private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance)
+        private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
+            OracleMetadata oracleMetadata)
         {
-            string Format(decimal? value)
+            string Format(decimal? value, int decimals = 8, int padSize = 17)
             {
-                return value.Value.ToString("F8").PadLeft(15);
+                if (!value.HasValue)
+                {
+                    return "??";
+                }
+
+                return value.Value.ToString($"N{decimals}").PadLeft(padSize);
             }
 
+            int assetDecimals = oracleMetadata.ATTESTATION_SCALING.ToString().Length - 1;
+
             var totalBch = walletBalanceBch + contractsBalanceBch;
+            decimal? walletPercent = null;
+            decimal? contractsPercent = null;
+            if (totalBch.HasValue)
+            {
+                walletPercent = walletBalanceBch / totalBch * 100;
+                contractsPercent = contractsBalanceBch / totalBch * 100;
+            }
+            
             List<List<string>> rows =
             [
                 ["", "BCH", AppSettings.Currency.ToString(), "%"],
-                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance), (walletBalanceBch/totalBch*100).Value.ToString("F2").PadLeft(7)],
-                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance), (contractsBalanceBch/totalBch*100).Value.ToString("F2").PadLeft(7)],
-                ["Total balance:           ", Format(totalBch), Format(walletBalance + contractsBalance), ""]
+                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance, assetDecimals), Format(walletPercent, 2, 7)],
+                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance, assetDecimals), Format(contractsPercent, 2, 7)],
+                ["Total balance:           ", Format(totalBch), Format(walletBalance + contractsBalance, assetDecimals), ""]
             ];
 
             DisplayTable(rows, borders: false);
