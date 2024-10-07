@@ -38,8 +38,8 @@ namespace AutoHedger
             {
                 const string counterLeverage = "5"; //only check 20% hedge
                 
-                OracleMetadata metadata = await OraclesCashService.GetMetadata(currencyOracleKey);
-                decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, metadata);
+                OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(currencyOracleKey);
+                decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, oracleMetadata);
 
 
                 Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,19:F8}");
@@ -71,7 +71,7 @@ namespace AutoHedger
                     var contractAddresses = await anyHedge.GetContractAddresses();
                     var contracts = await anyHedge.GetContracts(contractAddresses);
                     var activeContracts = contracts.Where(x=> x.Fundings[0].Settlement == null).ToList();
-                    contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / 1_000_000m;
+                    contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
                     contractsBalanceBch = contractsBalance / latestPrice;
                     Console.WriteLine($"Active contracts balance: {contractsBalanceBch,16:F8} BCH {contractsBalance,16} BTC");
                 }
