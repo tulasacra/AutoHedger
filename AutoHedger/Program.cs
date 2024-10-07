@@ -56,7 +56,6 @@ namespace AutoHedger
                     var bchClient = new BitcoinCashClient();
                     walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { AppSettings.WalletAddress }).First().Value / 100_000_000;
                     walletBalance = walletBalanceBch.Value * latestPrice;
-                    Console.WriteLine($"Wallet balance: {walletBalanceBch,26:F8} BCH {walletBalance,20:F8} {AppSettings.Currency}");
                 }
                 catch (Exception ex)
                 {
@@ -73,17 +72,13 @@ namespace AutoHedger
                     var activeContracts = contracts.Where(x=> x.Fundings[0].Settlement == null).ToList();
                     contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
                     contractsBalanceBch = contractsBalance / latestPrice;
-                    Console.WriteLine($"Active contracts balance: {contractsBalanceBch,16:F8} BCH {contractsBalance,16} BTC");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error getting contract balance: {ex.Message}");
                 }
-
-                if (walletBalanceBch.HasValue && contractsBalanceBch.HasValue)
-                {
-                    Console.WriteLine($"Total balance: {walletBalanceBch + contractsBalanceBch,27:F8} BCH {walletBalance + contractsBalance,20:F8} {AppSettings.Currency}");
-                }
+                
+                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance);
 
 
                 Console.WriteLine(delimiter);
@@ -115,15 +110,75 @@ namespace AutoHedger
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
+        private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance)
+        {
+            string Format(decimal? value)
+            {
+                return value.Value.ToString("F8").PadLeft(15);
+            }
+
+            List<List<string>> rows =
+            [
+                ["", "BCH", AppSettings.Currency.ToString()],
+                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance)],
+                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance)],
+                ["Total balance:           ", Format(walletBalanceBch + contractsBalanceBch), Format(walletBalance + contractsBalance)]
+            ];
+
+            DisplayTable(rows, borders: false);
+        }
+
         private static void DisplayPremiumsData(List<PremiumDataItem> premiumData)
         {
-            Console.WriteLine("| Amount (BCH) | Duration (days) | Premium (%) | APY (%) |");
-            Console.WriteLine("|--------------|-----------------|-------------|---------|");
+            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Premium (%)", "APY (%)"]];
 
             foreach (var item in premiumData)
             {
-                Console.WriteLine($"| {item.Amount,12} | {item.Duration,15} | {item.PremiumInfo.Total,11:F2} | {item.Apy,7:F2} |");
+                rows.Add([
+                    item.Amount.ToString(),
+                    item.Duration.ToString(),
+                    item.PremiumInfo.Total.ToString("F2"),
+                    item.Apy.ToString("F2")
+                ]);
             }
+
+            DisplayTable(rows, borders: false);
+        }
+
+        private static void DisplayTable(List<List<string>> rows, bool firstRowIsHeaders = true, bool borders = true)
+        {
+            if (rows == null || rows.Count == 0)
+                return;
+
+            int[] columnWidths = new int[rows[0].Count];
+            for (int i = 0; i < rows[0].Count; i++)
+            {
+                columnWidths[i] = rows.Max(row => row[i].Length);
+            }
+
+            string separator = "|" + string.Join("|", columnWidths.Select(w => new string('-', w + 2))) + "|";
+
+            if (borders)
+                Console.WriteLine(separator);
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                List<string> row = rows[i];
+                string line = "|";
+
+                for (int j = 0; j < row.Count; j++)
+                {
+                    line += $" {row[j].PadLeft(columnWidths[j])} |";
+                }
+
+                Console.WriteLine(line);
+
+                if (i == 0 && firstRowIsHeaders)
+                    Console.WriteLine(separator);
+            }
+
+            if (borders)
+                Console.WriteLine(separator);
         }
 
         private static (decimal amount, double duration)? GetBestContractParameters(List<PremiumDataItem> premiumData, decimal walletBalanceBch)
