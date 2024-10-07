@@ -1,4 +1,5 @@
-﻿using BitcoinCash;
+﻿using AnyHedgeNet;
+using BitcoinCash;
 using Timer = System.Timers.Timer;
 
 namespace AutoHedger
@@ -19,7 +20,7 @@ namespace AutoHedger
             timer.AutoReset = true;
             timer.Enabled = true;
 
-            
+
             await DisplayData();
             Console.ReadLine();
         }
@@ -49,8 +50,6 @@ namespace AutoHedger
                 try
                 {
                     var bchClient = new BitcoinCashClient();
-                    // var anyhedgeWallet = bchClient.GetWallet(AppSettings.AccountKey);
-                    //todo  anyhedgeWallet.transactions
                     walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { AppSettings.WalletAddress }).First().Value / 100_000_000;
                     decimal walletBalance = walletBalanceBch.Value * latestPrice;
                     Console.WriteLine($"Wallet balance: {walletBalanceBch,20:F8} BCH {walletBalance,20:F8} {AppSettings.Currency}");
@@ -58,6 +57,20 @@ namespace AutoHedger
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error getting wallet balance: {ex.Message}");
+                }
+
+                try
+                {
+                    var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
+                    var contractAddresses = await anyHedge.GetContractAddresses();
+                    var contracts = await anyHedge.GetContracts(contractAddresses);
+                    var activeContracts = contracts.Where(x=> x.Fundings[0].Settlement == null).ToList();
+                    var contractsBalanceBch = activeContracts.Sum(c => c.Metadata.NominalUnits) / 100_000_000m;
+                    Console.WriteLine($"Active contracts balance: {contractsBalanceBch,16:F8} BCH");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error getting contract balance: {ex.Message}");
                 }
 
 

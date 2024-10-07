@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoHedger", "AutoHedger\Au
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OraclesCash", "OraclesCash\OraclesCash.csproj", "{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnyHedgeNet", "AnyHedgeNet\AnyHedgeNet.csproj", "{C9FACD9B-0685-484A-9353-874D550D0946}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0DEBB6B2-A37C-4688-8F8A-856E9EF575E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9FACD9B-0685-484A-9353-874D550D0946}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9FACD9B-0685-484A-9353-874D550D0946}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9FACD9B-0685-484A-9353-874D550D0946}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9FACD9B-0685-484A-9353-874D550D0946}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
