@@ -47,30 +47,39 @@ namespace AutoHedger
 
 
                 decimal? walletBalanceBch = null;
+                decimal? walletBalance = null;
                 try
                 {
                     var bchClient = new BitcoinCashClient();
                     walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { AppSettings.WalletAddress }).First().Value / 100_000_000;
-                    decimal walletBalance = walletBalanceBch.Value * latestPrice;
-                    Console.WriteLine($"Wallet balance: {walletBalanceBch,20:F8} BCH {walletBalance,20:F8} {AppSettings.Currency}");
+                    walletBalance = walletBalanceBch.Value * latestPrice;
+                    Console.WriteLine($"Wallet balance: {walletBalanceBch,26:F8} BCH {walletBalance,20:F8} {AppSettings.Currency}");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error getting wallet balance: {ex.Message}");
                 }
 
+                decimal? contractsBalanceBch = null;
+                decimal? contractsBalance = null;
                 try
                 {
                     var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
                     var contractAddresses = await anyHedge.GetContractAddresses();
                     var contracts = await anyHedge.GetContracts(contractAddresses);
                     var activeContracts = contracts.Where(x=> x.Fundings[0].Settlement == null).ToList();
-                    var contractsBalanceBch = activeContracts.Sum(c => c.Metadata.NominalUnits) / 100_000_000m;
-                    Console.WriteLine($"Active contracts balance: {contractsBalanceBch,16:F8} BCH");
+                    contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / 1_000_000m;
+                    contractsBalanceBch = contractsBalance / latestPrice;
+                    Console.WriteLine($"Active contracts balance: {contractsBalanceBch,16:F8} BCH {contractsBalance,16} BTC");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error getting contract balance: {ex.Message}");
+                }
+
+                if (walletBalanceBch.HasValue && contractsBalanceBch.HasValue)
+                {
+                    Console.WriteLine($"Total balance: {walletBalanceBch + contractsBalanceBch,27:F8} BCH {walletBalance + contractsBalance,20:F8} {AppSettings.Currency}");
                 }
 
 
