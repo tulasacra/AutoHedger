@@ -117,12 +117,13 @@ namespace AutoHedger
                 return value.Value.ToString("F8").PadLeft(15);
             }
 
+            var totalBch = walletBalanceBch + contractsBalanceBch;
             List<List<string>> rows =
             [
-                ["", "BCH", AppSettings.Currency.ToString()],
-                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance)],
-                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance)],
-                ["Total balance:           ", Format(walletBalanceBch + contractsBalanceBch), Format(walletBalance + contractsBalance)]
+                ["", "BCH", AppSettings.Currency.ToString(), "%"],
+                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance), (walletBalanceBch/totalBch*100).Value.ToString("F2").PadLeft(7)],
+                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance), (contractsBalanceBch/totalBch*100).Value.ToString("F2").PadLeft(7)],
+                ["Total balance:           ", Format(totalBch), Format(walletBalance + contractsBalance), ""]
             ];
 
             DisplayTable(rows, borders: false);
