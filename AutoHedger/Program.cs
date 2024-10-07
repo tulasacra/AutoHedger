@@ -1,5 +1,6 @@
 ﻿using AnyHedgeNet;
 using BitcoinCash;
+using OraclesCash;
 using Timer = System.Timers.Timer;
 
 namespace AutoHedger
@@ -36,7 +37,9 @@ namespace AutoHedger
             try
             {
                 const string counterLeverage = "5"; //only check 20% hedge
-                decimal latestPrice = await OraclesCash.OraclesCash.GetLatestPrice(currencyOracleKey);
+                
+                OracleMetadata metadata = await OraclesCashService.GetMetadata(currencyOracleKey);
+                decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, metadata);
 
 
                 Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,19:F8}");

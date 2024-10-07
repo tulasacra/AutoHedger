@@ -2,11 +2,11 @@ using System.Net.Http.Json;
 
 namespace OraclesCash;
 
-public static partial class OraclesCash
+public static partial class OraclesCashService
 {
     private static readonly HttpClient client = new HttpClient();
 
-    public static async Task<decimal> GetLatestPrice(string oraclePublicKey)
+    public static async Task<decimal> GetLatestPrice(string oraclePublicKey, OracleMetadata? metadata = null)
     {
         string url = $"https://oracles.generalprotocols.com/api/v1/oracleMessages?publicKey={oraclePublicKey}";
         HttpResponseMessage response = await client.GetAsync(url);
@@ -20,8 +20,10 @@ public static partial class OraclesCash
         // Assuming the latest price is in the first message
         var latestMessage = priceData.OracleMessages.First();
 
-        //int? scaling = await OraclesCash.GetAttestationScaling(oraclePublicKey);
-        OracleMetadata metadata = await GetMetadata(oraclePublicKey);
+        if (metadata == null)
+        {
+            metadata = await GetMetadata(oraclePublicKey);
+        }
 
         return ParsePriceFromMessage(latestMessage.Message, metadata.ATTESTATION_SCALING);
     }
