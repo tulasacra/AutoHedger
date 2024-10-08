@@ -13,9 +13,21 @@ namespace AutoHedger
                 .Build();
         }
 
-        public static Currency Currency => Enum.Parse<Currency>(_config["Currency"]);
         public static double MinimumApy => double.Parse(_config["MinimumApy"]);
         public static string AccountKey => _config["AccountKey"];
-        public static string WalletAddress => _config["WalletAddress"];
+        public static List<WalletConfig> Wallets => _config.GetSection("Wallets")
+            .GetChildren()
+            .Select(x => new WalletConfig
+            {
+                Currency = Enum.Parse<Currency>(x["Currency"]),
+                Address = x["Address"]
+            })
+            .ToList();
+    }
+
+    public class WalletConfig
+    {
+        public Currency Currency { get; set; }
+        public string Address { get; set; }
     }
 }

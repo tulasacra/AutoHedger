@@ -7,44 +7,57 @@ namespace AutoHedger
 {
     class Program
     {
-        private static readonly string currencyOracleKey = OracleKeys.Keys[AppSettings.Currency];
+        private static readonly List<CurrencyConfig> accounts = AppSettings.Wallets.Select(x => new CurrencyConfig(x)).ToList();
 
         private static Timer timer;
         const int Minutes = 15;
 
+        private const string delimiter = "----------------------------------------------------------------------------------------------------";
+        private const string delimiterBold = "====================================================================================================";
+
         static async Task Main(string[] args)
         {
             timer = new Timer(TimeSpan.FromMinutes(Minutes));
-            timer.Elapsed += async (sender, e) => await DisplayData();
+            timer.Elapsed += async (sender, e) => await DisplayData(accounts);
             timer.AutoReset = true;
             timer.Enabled = true;
 
-
-            await DisplayData();
+            await DisplayData(accounts);
             Console.ReadLine();
         }
 
-        private static async Task DisplayData()
+        private static async Task DisplayData(List<CurrencyConfig> accounts)
         {
-            const string delimiter = "----------------------------------------------------------------------------------------------------";
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
-            Console.WriteLine(delimiter);
+            
+            foreach (var account in accounts)
+            {
+                Console.WriteLine(delimiterBold);
+                await DisplayData(account);
+            }
+            
+            Console.WriteLine(delimiterBold);
+            Console.WriteLine("Press [Enter] to exit the program.");
+        }
 
+        private static async Task DisplayData(CurrencyConfig account)
+        {
             try
             {
                 const string counterLeverage = "5"; //only check 20% hedge
-                
-                OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(currencyOracleKey);
-                decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, oracleMetadata);
+
+                var oracleKey = account.OracleKey;
+                OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(oracleKey);
+                decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
                 
                 decimal? walletBalanceBch = null;
                 decimal? walletBalance = null;
                 try
                 {
                     var bchClient = new BitcoinCashClient();
-                    walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { AppSettings.WalletAddress }).First().Value / 100_000_000;
+                    walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
                     walletBalance = walletBalanceBch.Value * latestPrice;
                 }
                 catch (Exception ex)
@@ -61,10 +74,10 @@ namespace AutoHedger
                     var contractAddresses = await anyHedge.GetContractAddresses();
                     var contracts = await anyHedge.GetContracts(contractAddresses);
                     var activeContracts = contracts
-                        .Where(x=>x.Parameters.OraclePublicKey == currencyOracleKey)
+                        .Where(x=>x.Parameters.OraclePublicKey == oracleKey)
                         .Where(x=> x.Fundings[0].Settlement == null).ToList();
                     var settledContracts = contracts
-                        .Where(x=>x.Parameters.OraclePublicKey == currencyOracleKey)
+                        .Where(x=>x.Parameters.OraclePublicKey == oracleKey)
                         .Where(x=> x.Fundings[0].Settlement != null).ToList();
                     contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
                     contractsBalanceBch = contractsBalance / latestPrice;
@@ -80,11 +93,11 @@ namespace AutoHedger
                 Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
                 Console.WriteLine(delimiter);
                 
-                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata);
+                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
 
 
                 Console.WriteLine(delimiter);
-                var premiumData = (await Premiums.GetPremiums(currencyOracleKey, counterLeverage, 0))
+                var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))
                     .Where(x => x.Apy >= AppSettings.MinimumApy)
                     .ToList();
                 //Console.WriteLine("Sorted by amount:");
@@ -109,7 +122,6 @@ namespace AutoHedger
             }
 
             Console.WriteLine(delimiter);
-            Console.WriteLine("Press [Enter] to exit the program.");
         }
 
         private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
@@ -137,7 +149,7 @@ namespace AutoHedger
         }
 
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
-            OracleMetadata oracleMetadata)
+            OracleMetadata oracleMetadata, WalletConfig wallet)
         {
             string Format(decimal? value, int decimals = 8, int padSize = 17)
             {
@@ -162,7 +174,7 @@ namespace AutoHedger
             
             List<List<string>> rows =
             [
-                ["", "BCH", AppSettings.Currency.ToString(), "%"],
+                ["", "BCH", wallet.Currency.ToString(), "%"],
                 ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance, assetDecimals), Format(walletPercent, 2, 7)],
                 ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance, assetDecimals), Format(contractsPercent, 2, 7)],
                 ["Total balance:           ", Format(totalBch), Format(walletBalance + contractsBalance, assetDecimals), ""]
