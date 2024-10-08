@@ -7,8 +7,6 @@ namespace AutoHedger
 {
     class Program
     {
-        private static readonly List<CurrencyConfig> accounts = AppSettings.Wallets.Select(x => new CurrencyConfig(x)).ToList();
-
         private static Timer timer;
         const int Minutes = 15;
         
@@ -19,6 +17,9 @@ namespace AutoHedger
 
         static async Task Main(string[] args)
         {
+            Console.Write("Reading OracleMetadata ..");
+            CurrencyConfig[] accounts = await CurrencyConfig.Get(AppSettings.Wallets);
+            
             timer = new Timer(TimeSpan.FromMinutes(Minutes));
             timer.Elapsed += async (sender, e) => await DisplayData(accounts);
             timer.AutoReset = true;
@@ -28,7 +29,7 @@ namespace AutoHedger
             Console.ReadLine();
         }
 
-        private static async Task DisplayData(List<CurrencyConfig> accounts)
+        private static async Task DisplayData(CurrencyConfig[] accounts)
         {
             spinner.Stop();
             Console.Clear();
@@ -62,7 +63,7 @@ namespace AutoHedger
             const string counterLeverage = "5"; //only check 20% hedge
 
             var oracleKey = account.OracleKey;
-            OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(oracleKey);
+            OracleMetadata? oracleMetadata = account.OracleMetadata;
             decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
 
             decimal? walletBalanceBch = null;
