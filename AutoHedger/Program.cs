@@ -31,95 +31,95 @@ namespace AutoHedger
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
-            
-            var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
-            var contractAddresses = await anyHedge.GetContractAddresses();
-            var contracts = await anyHedge.GetContracts(contractAddresses);
-            
-            foreach (var account in accounts)
+
+            try
             {
-                Console.WriteLine(delimiterBold);
-                await DisplayData(account, contracts);
+                var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
+                var contractAddresses = await anyHedge.GetContractAddresses();
+                var contracts = await anyHedge.GetContracts(contractAddresses);
+
+                foreach (var account in accounts)
+                {
+                    Console.WriteLine(delimiterBold);
+                    await DisplayData(account, contracts);
+                }
             }
-            
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Something went wrong (retry in {Minutes} minutes): {ex.Message}");
+            }
+
             Console.WriteLine(delimiterBold);
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
         private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts)
         {
+            const string counterLeverage = "5"; //only check 20% hedge
+
+            var oracleKey = account.OracleKey;
+            OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(oracleKey);
+            decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
+
+            decimal? walletBalanceBch = null;
+            decimal? walletBalance = null;
             try
             {
-                const string counterLeverage = "5"; //only check 20% hedge
-
-                var oracleKey = account.OracleKey;
-                OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(oracleKey);
-                decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
-                
-                decimal? walletBalanceBch = null;
-                decimal? walletBalance = null;
-                try
-                {
-                    var bchClient = new BitcoinCashClient();
-                    walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
-                    walletBalance = walletBalanceBch.Value * latestPrice;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error getting wallet balance: {ex.Message}");
-                }
-                
-                decimal? contractsBalanceBch = null;
-                decimal? contractsBalance = null;
-                decimal? bchAcquisitionCostFifo = null;
-                try
-                {
-                    var activeContracts = contracts
-                        .Where(x=>x.Parameters.OraclePublicKey == oracleKey)
-                        .Where(x=> x.Fundings[0].Settlement == null).ToList();
-                    var settledContracts = contracts
-                        .Where(x=>x.Parameters.OraclePublicKey == oracleKey)
-                        .Where(x=> x.Fundings[0].Settlement != null).ToList();
-                    contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
-                    contractsBalanceBch = contractsBalance / latestPrice;
-                    bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error getting contract balance: {ex.Message}");
-                }
-
-                Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
-                var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-                Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
-                Console.WriteLine(delimiter);
-                
-                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
-
-
-                Console.WriteLine(delimiter);
-                var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))
-                    .Where(x => x.Apy >= AppSettings.MinimumApy)
-                    .ToList();
-                //Console.WriteLine("Sorted by amount:");
-                //DisplayPremiumsData(premiumData);
-                //Console.WriteLine("Sorted by duration:");
-                var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
-                DisplayPremiumsData(premiumDataByDuration);
-
-                if (walletBalanceBch.HasValue && premiumData.Any())
-                {
-                    var bestContractParameters = GetBestContractParameters(premiumData, walletBalanceBch.Value);
-                    if (bestContractParameters.HasValue)
-                    {
-                        Console.WriteLine(delimiter);
-                        Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
-                    }
-                }
+                var bchClient = new BitcoinCashClient();
+                walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
+                walletBalance = walletBalanceBch.Value * latestPrice;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Something went wrong (retry in {Minutes} minutes): {ex.Message}");
+                Console.WriteLine($"Error getting wallet balance: {ex.Message}");
+            }
+
+            decimal? contractsBalanceBch = null;
+            decimal? contractsBalance = null;
+            decimal? bchAcquisitionCostFifo = null;
+            try
+            {
+                var activeContracts = contracts
+                    .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+                    .Where(x => x.Fundings[0].Settlement == null).ToList();
+                var settledContracts = contracts
+                    .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+                    .Where(x => x.Fundings[0].Settlement != null).ToList();
+                contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
+                contractsBalanceBch = contractsBalance / latestPrice;
+                bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting contract balance: {ex.Message}");
+            }
+
+            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
+            var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
+            Console.WriteLine(delimiter);
+
+            DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
+
+
+            Console.WriteLine(delimiter);
+            var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))
+                .Where(x => x.Apy >= AppSettings.MinimumApy)
+                .ToList();
+            //Console.WriteLine("Sorted by amount:");
+            //DisplayPremiumsData(premiumData);
+            //Console.WriteLine("Sorted by duration:");
+            var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
+            DisplayPremiumsData(premiumDataByDuration);
+
+            if (walletBalanceBch.HasValue && premiumData.Any())
+            {
+                var bestContractParameters = GetBestContractParameters(premiumData, walletBalanceBch.Value);
+                if (bestContractParameters.HasValue)
+                {
+                    Console.WriteLine(delimiter);
+                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
+                }
             }
 
             Console.WriteLine(delimiter);
@@ -128,14 +128,14 @@ namespace AutoHedger
         private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
         {
             if (!walletBalance.HasValue || walletBalance == 0 || !settledContracts.Any()) return null;
-            
+
             decimal totalCost = 0;
             decimal remainingBalance = walletBalance.Value;
 
             foreach (var contract in settledContracts.OrderByDescending(c => c.Parameters.MaturityTimestamp)) //todo actual settlement timestamp
             {
                 if (remainingBalance == 0) break;
-                
+
                 var settlement = contract.Fundings[0].Settlement;
 
                 decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / 100_000_000m);
@@ -172,7 +172,7 @@ namespace AutoHedger
                 walletPercent = walletBalanceBch / totalBch * 100;
                 contractsPercent = contractsBalanceBch / totalBch * 100;
             }
-            
+
             List<List<string>> rows =
             [
                 ["", "BCH", wallet.Currency.ToString(), "%"],
