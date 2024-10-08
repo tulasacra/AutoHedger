@@ -98,9 +98,9 @@ namespace AutoHedger
                 Console.WriteLine($"Error getting contract balance: {ex.Message}");
             }
 
-            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
+            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)}");
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta.Format(2, 0, true)} %)");
             Console.WriteLine(delimiter);
 
             DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);

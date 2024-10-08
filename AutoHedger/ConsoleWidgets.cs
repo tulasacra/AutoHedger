@@ -40,14 +40,14 @@ public static class ConsoleWidgets
             Console.WriteLine(separator);
     }
     
-    public static string Format(this decimal? value, int decimals = 8, int padSize = 17)
+    public static string Format(this decimal? value, int decimals = 8, int padSize = 17, bool showPlus = false)
     {
         if (!value.HasValue)
         {
-            return "??";
+            return "??".PadLeft(padSize);
         }
 
-        return value.Value.ToString($"N{decimals}").PadLeft(padSize);
+        return ((showPlus && value.Value >= 0 ? "+" : "") + value.Value.ToString($"N{decimals}")).PadLeft(padSize);
     }
 }
 public class Spinner
