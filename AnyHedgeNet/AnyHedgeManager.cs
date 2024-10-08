@@ -59,7 +59,7 @@ public class AnyHedgeManager
         }
     }
 
-    private static Dictionary<string, string> contractsCache = new(); 
+    private static Dictionary<string, string?> contractsCache = new(); 
 
     public async Task<List<string>> GetContractAddresses()
     {
@@ -84,8 +84,7 @@ public class AnyHedgeManager
                 // only outgoing transactions are contract funding candidates
                 var transactions = data["transactions"].Where(x=> x["balance_change"].ToString().StartsWith('-'));
 
-                List<Task<string>> tasks = new List<Task<string>>();
-                List<string> contractIds = new (contractsCache.Values);
+                List<Task<(string txid, string? contractId)>> tasks = new ();
                 
                 foreach (var tx in transactions)
                 {
@@ -112,12 +111,11 @@ public class AnyHedgeManager
                                     if (type == "scripthash")
                                     {
                                         var contractId = output["recipient"].ToString();
-                                        contractsCache.Add(txid, contractId);
-                                        return contractId;
+                                        return (txid, contractId);
                                     }
                                 }
 
-                                return null;
+                                return (txid, null);
                             }
                             else
                             {
@@ -127,10 +125,20 @@ public class AnyHedgeManager
                     }
                 }
 
-                // Filter out null/empty results and add to those from cache
-                var newContracts = (await Task.WhenAll(tasks)).Where(id => !string.IsNullOrEmpty(id));
-                contractIds.AddRange(newContracts);
-                return contractIds;
+                // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
+                var newContracts = await Task.WhenAll(tasks);
+                var result = contractsCache.Values
+                    .Concat(newContracts.Select(x=>x.contractId))
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Select(id => (string)id)
+                    .ToList();
+
+                foreach (var newContract in newContracts)
+                {
+                    contractsCache.Add(newContract.txid, newContract.contractId);
+                }
+                
+                return result;
             }
             else
             {
