@@ -32,17 +32,21 @@ namespace AutoHedger
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
             
+            var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
+            var contractAddresses = await anyHedge.GetContractAddresses();
+            var contracts = await anyHedge.GetContracts(contractAddresses);
+            
             foreach (var account in accounts)
             {
                 Console.WriteLine(delimiterBold);
-                await DisplayData(account);
+                await DisplayData(account, contracts);
             }
             
             Console.WriteLine(delimiterBold);
             Console.WriteLine("Press [Enter] to exit the program.");
         }
 
-        private static async Task DisplayData(CurrencyConfig account)
+        private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts)
         {
             try
             {
@@ -70,9 +74,6 @@ namespace AutoHedger
                 decimal? bchAcquisitionCostFifo = null;
                 try
                 {
-                    var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
-                    var contractAddresses = await anyHedge.GetContractAddresses();
-                    var contracts = await anyHedge.GetContracts(contractAddresses);
                     var activeContracts = contracts
                         .Where(x=>x.Parameters.OraclePublicKey == oracleKey)
                         .Where(x=> x.Fundings[0].Settlement == null).ToList();
