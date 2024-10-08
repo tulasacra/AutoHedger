@@ -115,7 +115,10 @@ namespace AutoHedger
             //DisplayPremiumsData(premiumData);
             //Console.WriteLine("Sorted by duration:");
             var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
-            DisplayPremiumsData(premiumDataByDuration);
+            if (premiumDataByDuration.Any())
+            {
+                DisplayPremiumsData(premiumDataByDuration);
+            }
 
             if (walletBalanceBch.HasValue && premiumData.Any())
             {
