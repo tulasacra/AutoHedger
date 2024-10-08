@@ -7,8 +7,6 @@ namespace AutoHedger
 {
     class Program
     {
-        private const decimal bchAcquisitionCostFifo = 0.00571983m; //todo calculate
-
         private static readonly string currencyOracleKey = OracleKeys.Keys[AppSettings.Currency];
 
         private static Timer timer;
@@ -40,14 +38,7 @@ namespace AutoHedger
                 
                 OracleMetadata oracleMetadata = await OraclesCashService.GetMetadata(currencyOracleKey);
                 decimal latestPrice = await OraclesCashService.GetLatestPrice(currencyOracleKey, oracleMetadata);
-
-
-                Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
-                var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-                Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
-                Console.WriteLine(delimiter);
-
-
+                
                 decimal? walletBalanceBch = null;
                 decimal? walletBalance = null;
                 try
@@ -60,9 +51,10 @@ namespace AutoHedger
                 {
                     Console.WriteLine($"Error getting wallet balance: {ex.Message}");
                 }
-
+                
                 decimal? contractsBalanceBch = null;
                 decimal? contractsBalance = null;
+                decimal? bchAcquisitionCostFifo = null;
                 try
                 {
                     var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
@@ -71,13 +63,22 @@ namespace AutoHedger
                     var activeContracts = contracts
                         .Where(x=>x.Parameters.OraclePublicKey == currencyOracleKey)
                         .Where(x=> x.Fundings[0].Settlement == null).ToList();
+                    var settledContracts = contracts
+                        .Where(x=>x.Parameters.OraclePublicKey == currencyOracleKey)
+                        .Where(x=> x.Fundings[0].Settlement != null).ToList();
                     contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
                     contractsBalanceBch = contractsBalance / latestPrice;
+                    bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error getting contract balance: {ex.Message}");
                 }
+
+                Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo,24:N8}");
+                var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
+                Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta:+0.00;-0.00;+0.00} %)");
+                Console.WriteLine(delimiter);
                 
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata);
 
@@ -109,6 +110,30 @@ namespace AutoHedger
 
             Console.WriteLine(delimiter);
             Console.WriteLine("Press [Enter] to exit the program.");
+        }
+
+        private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
+        {
+            if (!walletBalance.HasValue || walletBalance == 0 || !settledContracts.Any()) return null;
+            
+            decimal totalCost = 0;
+            decimal remainingBalance = walletBalance.Value;
+
+            foreach (var contract in settledContracts.OrderByDescending(c => c.Parameters.MaturityTimestamp)) //todo actual settlement timestamp
+            {
+                if (remainingBalance == 0) break;
+                
+                var settlement = contract.Fundings[0].Settlement;
+
+                decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / 100_000_000m);
+                decimal contractPrice = (decimal)settlement.SettlementPrice / oracleMetadata.ATTESTATION_SCALING;
+
+
+                totalCost += contractAmount * contractPrice;
+                remainingBalance -= contractAmount;
+            }
+
+            return totalCost / walletBalance;
         }
 
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
