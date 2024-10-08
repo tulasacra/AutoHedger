@@ -152,16 +152,6 @@ namespace AutoHedger
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
             OracleMetadata oracleMetadata, WalletConfig wallet)
         {
-            string Format(decimal? value, int decimals = 8, int padSize = 17)
-            {
-                if (!value.HasValue)
-                {
-                    return "??";
-                }
-
-                return value.Value.ToString($"N{decimals}").PadLeft(padSize);
-            }
-
             int assetDecimals = oracleMetadata.ATTESTATION_SCALING.ToString().Length - 1;
 
             var totalBch = walletBalanceBch + contractsBalanceBch;
@@ -176,12 +166,12 @@ namespace AutoHedger
             List<List<string>> rows =
             [
                 ["", "BCH", wallet.Currency.ToString(), "%"],
-                ["Wallet balance:          ", Format(walletBalanceBch), Format(walletBalance, assetDecimals), Format(walletPercent, 2, 7)],
-                ["Active contracts balance:", Format(contractsBalanceBch), Format(contractsBalance, assetDecimals), Format(contractsPercent, 2, 7)],
-                ["Total balance:           ", Format(totalBch), Format(walletBalance + contractsBalance, assetDecimals), ""]
+                ["Wallet balance:          ", walletBalanceBch.Format(), walletBalance.Format(assetDecimals), walletPercent.Format(2, 7)],
+                ["Active contracts balance:", contractsBalanceBch.Format(), contractsBalance.Format(assetDecimals), contractsPercent.Format(2, 7)],
+                ["Total balance:           ", totalBch.Format(), (walletBalance + contractsBalance).Format(assetDecimals), ""]
             ];
 
-            DisplayTable(rows, borders: false);
+            ConsoleWidgets.DisplayTable(rows, borders: false);
         }
 
         private static void DisplayPremiumsData(List<PremiumDataItem> premiumData)
@@ -198,43 +188,7 @@ namespace AutoHedger
                 ]);
             }
 
-            DisplayTable(rows, borders: false);
-        }
-
-        private static void DisplayTable(List<List<string>> rows, bool firstRowIsHeaders = true, bool borders = true)
-        {
-            if (rows == null || rows.Count == 0)
-                return;
-
-            int[] columnWidths = new int[rows[0].Count];
-            for (int i = 0; i < rows[0].Count; i++)
-            {
-                columnWidths[i] = rows.Max(row => row[i].Length);
-            }
-
-            string separator = "|" + string.Join("|", columnWidths.Select(w => new string('-', w + 2))) + "|";
-
-            if (borders)
-                Console.WriteLine(separator);
-
-            for (int i = 0; i < rows.Count; i++)
-            {
-                List<string> row = rows[i];
-                string line = "|";
-
-                for (int j = 0; j < row.Count; j++)
-                {
-                    line += $" {row[j].PadLeft(columnWidths[j])} |";
-                }
-
-                Console.WriteLine(line);
-
-                if (i == 0 && firstRowIsHeaders)
-                    Console.WriteLine(separator);
-            }
-
-            if (borders)
-                Console.WriteLine(separator);
+            ConsoleWidgets.DisplayTable(rows, borders: false);
         }
 
         private static (decimal amount, double duration)? GetBestContractParameters(List<PremiumDataItem> premiumData, decimal walletBalanceBch)
