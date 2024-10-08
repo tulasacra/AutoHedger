@@ -1,3 +1,5 @@
+using Timer = System.Timers.Timer;
+
 namespace AutoHedger;
 
 public static class ConsoleWidgets
@@ -46,5 +48,47 @@ public static class ConsoleWidgets
         }
 
         return value.Value.ToString($"N{decimals}").PadLeft(padSize);
+    }
+}
+public class Spinner
+{
+    private Timer timer;
+    //private string[] frames = new[] { "|", "/", "-", "\\" };
+    private string[] frames = new[] { "|", "+", "-", "+" };
+    private int currentFrame = 0;
+    private int left;
+    private int top;
+
+    public Spinner()
+    {
+        timer = new Timer(TimeSpan.FromMilliseconds(250));
+        timer.Elapsed += (sender, e) => Tick();
+    }
+
+    public void Start()
+    {
+        left = Console.CursorLeft;
+        top = Console.CursorTop;
+        timer.Start();
+    }
+
+    public void Stop()
+    {
+        timer.Stop();
+        Console.SetCursorPosition(left, top);
+        Console.Write(" ");
+        Console.SetCursorPosition(left, top);
+    }
+
+    private void Tick()
+    {
+        int originalLeft = Console.CursorLeft;
+        int originalTop = Console.CursorTop;
+
+        Console.SetCursorPosition(left, top);
+        Console.Write(frames[currentFrame]);
+        Console.SetCursorPosition(originalLeft, originalTop);
+
+        currentFrame = (currentFrame + 1) % frames.Length;
     }
 }

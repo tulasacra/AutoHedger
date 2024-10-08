@@ -11,6 +11,8 @@ namespace AutoHedger
 
         private static Timer timer;
         const int Minutes = 15;
+        
+        private static readonly Spinner spinner = new Spinner();
 
         private const string delimiter = "----------------------------------------------------------------------------------------------------";
         private const string delimiterBold = "====================================================================================================";
@@ -21,13 +23,14 @@ namespace AutoHedger
             timer.Elapsed += async (sender, e) => await DisplayData(accounts);
             timer.AutoReset = true;
             timer.Enabled = true;
-
+            
             await DisplayData(accounts);
             Console.ReadLine();
         }
 
         private static async Task DisplayData(List<CurrencyConfig> accounts)
         {
+            spinner.Stop();
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
@@ -46,11 +49,12 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Something went wrong (retry in {Minutes} minutes): {ex.Message}");
+                Console.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex.Message}");
             }
 
             Console.WriteLine(delimiterBold);
-            Console.WriteLine("Press [Enter] to exit the program.");
+            Console.Write("Press [Enter] to exit the program.. ");
+            spinner.Start();
         }
 
         private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts)
