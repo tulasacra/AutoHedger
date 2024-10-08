@@ -1,5 +1,4 @@
 using System.Numerics;
-using Newtonsoft.Json;
 
 namespace AnyHedgeNet;
 

@@ -1,3 +1,4 @@
+using AnyHedgeNet;
 using Microsoft.Extensions.Configuration;
 
 namespace AutoHedger
@@ -5,16 +6,17 @@ namespace AutoHedger
     public static class AppSettings
     {
         private static readonly IConfiguration _config;
-        
+
         static AppSettings()
         {
             _config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile(Path.Combine("Settings", "appsettings.json"), optional: false)
                 .Build();
         }
 
         public static double MinimumApy => double.Parse(_config["MinimumApy"]);
         public static string AccountKey => _config["AccountKey"];
+
         public static List<WalletConfig> Wallets => _config.GetSection("Wallets")
             .GetChildren()
             .Select(x => new WalletConfig

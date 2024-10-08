@@ -5,5 +5,5 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 api references
-AutoHedger/appsettings.*.json
+**/appsettings.*.json
 node_modules

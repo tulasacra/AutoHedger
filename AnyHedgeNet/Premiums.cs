@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AutoHedger
+namespace AnyHedgeNet
 {
     public static class Premiums
     {

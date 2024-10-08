@@ -1,3 +1,5 @@
+using AnyHedgeNet;
+
 namespace AutoHedger;
 
 public class CurrencyConfig

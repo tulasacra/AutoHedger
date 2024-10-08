@@ -13,14 +13,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="appsettings.json">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+      <PackageReference Include="BitcoinCashClient" Version="1.5.6" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="BitcoinCashClient" Version="1.5.6" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+      <None Update="Settings\appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

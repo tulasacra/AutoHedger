@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
