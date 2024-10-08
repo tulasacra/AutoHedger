@@ -79,7 +79,8 @@ public class AnyHedgeManager
                 JObject json = JObject.Parse(jsonResult);
 
                 var data = json["data"][cashAddr];
-                var transactions = data["transactions"];
+                // only outgoing transactions are contract funding candidates
+                var transactions = data["transactions"].Where(x=> x["balance_change"].ToString().StartsWith('-'));
 
                 List<Task<string>> tasks = new List<Task<string>>();
 
