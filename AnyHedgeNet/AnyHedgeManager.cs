@@ -49,11 +49,6 @@ public class AnyHedgeManager
             throw new Exception(error);
         }
         
-       
-        result = Regex.Replace(result, @"(\d+)n", "$1"); // This will replace any number followed by 'n' with just the number.
-
-
-
         try
         {
             return JsonConvert.DeserializeObject<Contract>(result);

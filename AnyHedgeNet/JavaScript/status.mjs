@@ -24,24 +24,14 @@ const example = async function()
 {
 	const contractData = await anyHedgeManager.getContractStatus(CONTRACT_ADDRESS, privateKeyWIF);
 	
-	// Function to replace BigInt with strings
-	// Otherwise there is "TypeError: Do not know how to serialize a BigInt"
+	// Have to do this to prevent "TypeError: Do not know how to serialize a BigInt"
+	// It also solves the problem of JSON libs unable to parse numbers in the 12345n format.
 	const replaceBigInt = (key, value) =>
 		typeof value === 'bigint' ? value.toString() : value;
-
-	const formattedContractData = JSON.parse(JSON.stringify(contractData, replaceBigInt));
 	
-	// Format the settlement data in fundings
+	// Can't do simple console.log(contractData)
 	// Otherwise there is just "settlement: [Object]"
-	if (formattedContractData.fundings && formattedContractData.fundings.length > 0) {
-		formattedContractData.fundings.forEach(funding => {
-			if (funding.settlement) {
-				funding.settlement = JSON.parse(JSON.stringify(funding.settlement, replaceBigInt));
-			}
-		});
-	}
-	
-	console.log(JSON.stringify(formattedContractData, null, 2));
+	console.log(JSON.stringify(contractData, replaceBigInt))
 };
 
 await example();
