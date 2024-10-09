@@ -22,7 +22,8 @@ namespace AutoHedger
             .Select(x => new WalletConfig
             {
                 Currency = Enum.Parse<Currency>(x["Currency"]),
-                Address = x["Address"]
+                Address = x["Address"],
+                PrivateKeyWIF = x["PrivateKeyWIF"]
             })
             .ToList();
     }
@@ -31,5 +32,6 @@ namespace AutoHedger
     {
         public Currency Currency { get; set; }
         public string Address { get; set; }
+        public string PrivateKeyWIF { get; set; }
     }
 }

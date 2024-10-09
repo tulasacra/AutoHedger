@@ -38,7 +38,7 @@ const CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER = 10.00;
 //   2. Choose any address and take note of it so you can watch later for the automatic redemption to appear.
 //   2. Right click the address --> Private Key
 //   3. Copy the private key in the top box.
-const TAKER_WIF = '';
+const TAKER_WIF = process.argv[3];
 const TAKER_SIDE = 'short';
 const MAKER_SIDE = (TAKER_SIDE === 'short' ? 'long' : 'short');
 
@@ -52,7 +52,7 @@ const LIQUIDITY_PROVIDER_URL = `${LIQUIDITY_PROVIDER_SCHEME}://${LIQUIDITY_PROVI
 // To use the automated redemption service, you need to request an authentication token from the service provider.
 // Request a token once by running the following command in the terminal:
 // curl -d 'name=<Your Name Here>' "https://api.anyhedge.com/api/v2/requestToken"
-const AUTHENTICATION_TOKEN = '';
+const AUTHENTICATION_TOKEN = process.argv[2];
 
 // Name a value that can be used as an integer-based boolean (as contracts do)
 const INTEGER_TRUE = BigInt('1');
@@ -151,6 +151,13 @@ const example = async function()
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
 	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
+
+	
+	const replaceBigInt = (key, value) =>
+		typeof value === 'bigint' ? value.toString() : value;
+
+	console.log(JSON.stringify(pendingContractData, replaceBigInt))
+	return;
 
 	// Fetch all available UTXOs.
 	// NOTE: This will result in automatic consolidation of UTXOs and regular clients should implement their own coin selection strategies.

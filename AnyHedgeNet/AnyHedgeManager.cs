@@ -7,12 +7,12 @@ namespace AnyHedgeNet;
 public class AnyHedgeManager
 {
     private readonly string authenticationToken = "3c9a4fe90550861ebdeba1c30dc909c21e7d02c4438632a680b342422ad3b5f3";
-    private readonly string privateKeyWIF;
+    private readonly string accountPrivateKeyWIF;
 
-    public AnyHedgeManager(string privateKeyWif, string? authenticationToken = null)
+    public AnyHedgeManager(string accountPrivateKeyWif, string? authenticationToken = null)
     {
         this.authenticationToken = authenticationToken ?? this.authenticationToken;
-        this.privateKeyWIF = privateKeyWif;
+        this.accountPrivateKeyWIF = accountPrivateKeyWif;
     }
 
     public async Task<List<Contract>> GetContracts(List<string> contractAddress)
@@ -30,7 +30,44 @@ public class AnyHedgeManager
             {
                 WorkingDirectory = "JavaScript",
                 FileName = "node",
-                Arguments = $"status.mjs {authenticationToken} {ToCashAddr(contractAddress)} {privateKeyWIF}",
+                Arguments = $"status.mjs {authenticationToken} {ToCashAddr(contractAddress)} {accountPrivateKeyWIF}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+        await process.WaitForExitAsync();
+        string result = await process.StandardOutput.ReadToEndAsync();
+        string error = await process.StandardError.ReadToEndAsync();
+
+        if (process.ExitCode != 0)
+        {
+            throw new Exception(error);
+        }
+        
+        try
+        {
+            return JsonConvert.DeserializeObject<Contract>(result);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+    
+    public async Task<Contract> CreateContract(string privateKeyWIF)
+    {
+        var process = new System.Diagnostics.Process
+        {
+            StartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                WorkingDirectory = "JavaScript",
+                FileName = "node",
+                Arguments = $"liquidity-provider.mjs {authenticationToken} {privateKeyWIF}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -64,7 +101,7 @@ public class AnyHedgeManager
     public async Task<List<string>> GetContractAddresses()
     {
         Network network = Network.Main;
-        BitcoinSecret secret = new BitcoinSecret(privateKeyWIF, network);
+        BitcoinSecret secret = new BitcoinSecret(accountPrivateKeyWIF, network);
         PubKey pubKey = secret.PubKey;
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
         string cashAddr = ToCashAddr(legacyAddress.ToString());

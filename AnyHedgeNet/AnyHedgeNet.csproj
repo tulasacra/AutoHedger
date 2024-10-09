@@ -19,6 +19,18 @@
       <None Update="JavaScript\node_modules\**\*">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="JavaScript\liquidity-provider.mjs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="JavaScript\utils\anyhedge.mjs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="JavaScript\utils\network.mjs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="JavaScript\utils\wallet.mjs">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <Target Name="NpmInstall" AfterTargets="CopyFilesToOutputDirectory">

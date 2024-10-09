@@ -14,9 +14,12 @@ namespace AutoHedger
 
         private const string delimiter = "--------------------------------------------------------------------------------";
         private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
+        private static AnyHedgeManager AnyHedge;
 
         static async Task Main(string[] args)
         {
+            AnyHedge = new AnyHedgeManager(AppSettings.AccountKey);
+
             Console.Write("Reading OracleMetadata ..");
             CurrencyConfig[] accounts = await CurrencyConfig.Get(AppSettings.Wallets);
             
@@ -51,9 +54,8 @@ namespace AutoHedger
             try
             {
                 Console.Write("Reading contracts ..");
-                var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
-                var contractAddresses = await anyHedge.GetContractAddresses();
-                var contracts = await anyHedge.GetContracts(contractAddresses);
+                var contractAddresses = await AnyHedge.GetContractAddresses();
+                var contracts = await AnyHedge.GetContracts(contractAddresses);
                 Console.WriteLine("OK");
 
                 foreach (var account in accounts)
@@ -144,6 +146,10 @@ namespace AutoHedger
                 {
                     Console.WriteLine(delimiter);
                     Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
+                    if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
+                    {
+                        await AnyHedge.CreateContract(account.Wallet.PrivateKeyWIF);
+                    }
                 }
             }
         }
