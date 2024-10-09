@@ -1,4 +1,4 @@
-import { calculateRequiredFundingSatoshis } from '../../build/lib//util/funding-util.js';
+import { calculateRequiredFundingSatoshis } from '@generalprotocols/anyhedge/build/lib/util/funding-util.js';
 
 // ...
 export const calculateRequiredFundingSatoshisPerSide = async function(contractData, takerSide, liquidityProviderFeeInSatoshis)

@@ -1,16 +1,15 @@
 /* eslint-disable no-console, no-use-before-define */
 
 // Custodial example of establishing the parameters for an AnyHedge contract and funding it, then
-// it will wait for one minute before it requests and completes an early settlement.
 
 // Import library functions.
-import { AnyHedgeManager } from '../build/lib/index.js';
+import { AnyHedgeManager } from '@generalprotocols/anyhedge';
 import { hexToBin, hashTransaction } from '@bitauth/libauth';
 
 // Import utility functions.
-import { parseWIF, buildPreFundingTransaction } from './utils/wallet.js';
-import { calculateRequiredFundingSatoshisPerSide } from './utils/anyhedge.js';
-import { fetchJSONGetRequest, fetchJSONPostRequest, fetchCurrentOracleMessageAndSignature, fetchUnspentTransactionOutputs } from './utils/network.js';
+import { parseWIF, buildPreFundingTransaction } from './utils/wallet.mjs';
+import { calculateRequiredFundingSatoshisPerSide } from './utils/anyhedge.mjs';
+import { fetchJSONGetRequest, fetchJSONPostRequest, fetchCurrentOracleMessageAndSignature, fetchUnspentTransactionOutputs } from './utils/network.mjs';
 
 // Set how many US cents that Short would like to protect against price volatility.
 const NOMINAL_UNITS = 100;
@@ -195,57 +194,6 @@ const example = async function()
 	const { fundingTransactionHash } = fundContractResponse;
 
 	console.log(`Funded contract '${pendingContractData.address}' in transaction '${fundingTransactionHash}'.`);
-
-	// Sleep for a minute.
-	// NOTE: this allows funding transaction to fully propagate and gets a new oracle price for the settlement.
-	// NOTE: the oracle price used can still be the same, if price has not moved, and it can even be the same message if no new message has been issued.
-	console.log(`\nWaiting 1 minute...\n`);
-	await new Promise(resolve => setTimeout(resolve, 60 * 1000));
-
-	// Grab updated contract data from settlement service.
-	const fundedContractData = await anyHedgeManager.getContractStatus(address, TAKER_WIF);
-
-	// Fetch new oracle messages to use as the early settlement price point.
-	const [ settlementOracleMessage, settlementOracleSignature ] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host);
-
-	// Define url and arguments needed to request early settlement of our position.
-	const requestEarlySettlementUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/requestEarlySettlement`;
-	const requestEarlySettlementArguments =
-	{
-		contractAddress: pendingContractData.address,
-		settlementOracleMessage,
-		settlementOracleSignature,
-	};
-
-	// Send a request to the liquidity provider to settle the contract position early.
-	const requestEarlySettlementResponse = await fetchJSONPostRequest(requestEarlySettlementUrl, requestEarlySettlementArguments);
-
-	// Extract the settlement price, fee and timeout information from the response.
-	const { settlementPrice, settlementFeeInSatoshis, renegotiateAfterTimestamp: renegotiateSettlementAfterTimestamp } = requestEarlySettlementResponse;
-
-	// NOTE: We will assume all values provided as sensible and desired, but ideally this is data that users should manually inspect.
-
-	// Extract the funded contracts parameters, metadata and funding information.
-	const { parameters: contractParameters, metadata: contractMetadata, fundings } = fundedContractData;
-
-	// sign a mutual early maturation proposal, taking the liquidity provides settlement fee into account.
-	const takerEarlySettlementProposal = await anyHedgeManager.signMutualEarlyMaturation({ privateKeyWIF: TAKER_WIF, contractFunding: fundings[0], contractParameters, contractMetadata, settlementPrice, takerSettlementFeeInSatoshis: settlementFeeInSatoshis });
-
-	// Define url and arguments needed to complete early settlement of our position.
-	const completeEarlySettlementUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/settleContractEarly`;
-	const completeEarlySettlementArguments =
-	{
-		contractAddress: pendingContractData.address,
-		takerEarlySettlementProposal,
-	};
-
-	// Send the partially signed early termination request to the liquidity provider for completion.
-	const completeEarlySettlementResponse = await fetchJSONPostRequest(completeEarlySettlementUrl, completeEarlySettlementArguments);
-
-	// Extract the settlement transaction hash for the early settlement.
-	const { settlementTransactionHash } = completeEarlySettlementResponse;
-
-	console.log(`Settled contract '${pendingContractData.address}' early in transaction '${settlementTransactionHash}'.`);
 };
 
 // Run the example code.

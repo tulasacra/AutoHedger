@@ -1,11 +1,14 @@
 // ...
-import { DUST_LIMIT, P2PKH_INPUT_SIZE } from '../../build/lib/constants.js';
+import { DUST_LIMIT } from '@generalprotocols/anyhedge';
+
+// This is intended to be used for funding transaction size estimation
+const P2PKH_INPUT_SIZE = BigInt('148');
 
 // ...
 import { binToHex, sha256, ripemd160, secp256k1, decodePrivateKeyWif, encodeCashAddress, CashAddressType, encodeTransaction } from '@bitauth/libauth';
 
 // Ooof! this is ugly..
-import { createOutput, createUnsignedInput, estimateTransactionSizeWithoutInputs, signTransactionP2PKH } from '../../build/lib/util/funding-util.js';
+import { createOutput, createUnsignedInput, estimateTransactionSizeWithoutInputs, signTransactionP2PKH } from '@generalprotocols/anyhedge/build/lib/util/funding-util.js';
 
 // Parse a WIF string into a private key, public key and address.
 export const parseWIF = async function(privateKeyWIF)

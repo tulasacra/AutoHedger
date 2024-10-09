@@ -1,5 +1,5 @@
 // Import fetch to get and post requests.
-import fetch from 'node-fetch';
+//import fetch from 'node-fetch';
 
 // Import oracle related utilities.
 import { OracleNetwork, OracleData } from '@generalprotocols/price-oracle';
@@ -9,7 +9,7 @@ import { hexToBin } from '@bitauth/libauth';
 import { ElectrumNetworkProvider } from 'cashscript';
 
 // Load support for bigint in JSON
-import { decodeExtendedJson, encodeExtendedJson } from '../../build/lib/util/extended-json-util.js';
+import { decodeExtendedJson, encodeExtendedJson } from '@generalprotocols/anyhedge';
 
 // Define a variable to hold a local instance of the network provider.
 let electrumNetworkProvider;
