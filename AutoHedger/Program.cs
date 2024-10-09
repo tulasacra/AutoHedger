@@ -26,7 +26,19 @@ namespace AutoHedger
             timer.Enabled = true;
             
             await DisplayData(accounts);
-            Console.ReadLine();
+            
+            while (true)
+            {
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Q)
+                    {
+                        break;
+                    }
+                }
+                await Task.Delay(100);
+            }
         }
 
         private static async Task DisplayData(CurrencyConfig[] accounts)
@@ -38,9 +50,11 @@ namespace AutoHedger
 
             try
             {
+                Console.Write("Reading contracts ..");
                 var anyHedge = new AnyHedgeManager(AppSettings.AccountKey);
                 var contractAddresses = await anyHedge.GetContractAddresses();
                 var contracts = await anyHedge.GetContracts(contractAddresses);
+                Console.WriteLine("OK");
 
                 foreach (var account in accounts)
                 {
@@ -54,7 +68,7 @@ namespace AutoHedger
             }
 
             Console.WriteLine(delimiterBold);
-            Console.Write("Press [Enter] to exit the program.. ");
+            Console.Write("Press [Q] to exit the program.. ");
             spinner.Start();
         }
 
