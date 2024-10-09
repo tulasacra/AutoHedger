@@ -49,6 +49,20 @@ public static class ConsoleWidgets
 
         return ((showPlus && value.Value >= 0 ? "+" : "") + value.Value.ToString($"N{decimals}")).PadLeft(padSize);
     }
+
+    public static void Write(string s, ConsoleColor color)
+    {
+        Console.ForegroundColor = color;
+        Console.Write(s);
+        Console.ResetColor();
+    }
+
+    public static void WriteLine(string s, ConsoleColor color)
+    {
+        Write(s, color);
+        Console.WriteLine();
+    }
+
 }
 public class Spinner
 {

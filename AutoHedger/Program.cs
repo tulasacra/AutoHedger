@@ -50,7 +50,7 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex.Message}");
+                ConsoleWidgets.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex.Message}", ConsoleColor.Red);
             }
 
             Console.WriteLine(delimiterBold);
@@ -79,7 +79,7 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting wallet balance: {ex.Message}");
+                ConsoleWidgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
             }
 
             decimal? contractsBalanceBch = null;
@@ -99,7 +99,7 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting contract balance: {ex.Message}");
+                ConsoleWidgets.WriteLine($"Error getting contract balance: {ex.Message}", ConsoleColor.Red);
             }
 
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
