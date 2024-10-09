@@ -12,8 +12,8 @@ namespace AutoHedger
         
         private static readonly Spinner spinner = new Spinner();
 
-        private const string delimiter = "----------------------------------------------------------------------------------------------------";
-        private const string delimiterBold = "====================================================================================================";
+        private const string delimiter = "--------------------------------------------------------------------------------";
+        private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
 
         static async Task Main(string[] args)
         {
@@ -70,9 +70,12 @@ namespace AutoHedger
             decimal? walletBalance = null;
             try
             {
-                var bchClient = new BitcoinCashClient();
-                walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
-                walletBalance = walletBalanceBch.Value * latestPrice;
+                if (!string.IsNullOrEmpty(account.Wallet.Address) && account.Wallet.Address != "bitcoincash:")
+                {
+                    var bchClient = new BitcoinCashClient();
+                    walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
+                    walletBalance = walletBalanceBch.Value * latestPrice;
+                }
             }
             catch (Exception ex)
             {
@@ -99,15 +102,14 @@ namespace AutoHedger
                 Console.WriteLine($"Error getting contract balance: {ex.Message}");
             }
 
-            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)}");
+            Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} ({priceDelta.Format(2, 0, true)} %)");
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} ({priceDelta.Format(2, 0, true)} %)");
             Console.WriteLine(delimiter);
 
             DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
 
 
-            Console.WriteLine(delimiter);
             var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))
                 .Where(x => x.Apy >= AppSettings.MinimumApy)
                 .ToList();
@@ -115,8 +117,9 @@ namespace AutoHedger
             //DisplayPremiumsData(premiumData);
             //Console.WriteLine("Sorted by duration:");
             var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
-            if (premiumDataByDuration.Any())
+            if (premiumData.Any())
             {
+                Console.WriteLine(delimiter);
                 DisplayPremiumsData(premiumDataByDuration);
             }
 
@@ -129,8 +132,6 @@ namespace AutoHedger
                     Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
                 }
             }
-
-            Console.WriteLine(delimiter);
         }
 
         private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
