@@ -111,82 +111,73 @@ public class AnyHedgeManager
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
         string cashAddr = ToCashAddr(legacyAddress.ToString());
 
-        using (HttpClient client = new HttpClient())
+        using HttpClient client = new HttpClient();
+        string url = $"https://api.blockchair.com/bitcoin-cash/dashboards/address/{cashAddr}?transaction_details=true";
+        HttpResponseMessage response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
         {
-            string url = $"https://api.blockchair.com/bitcoin-cash/dashboards/address/{cashAddr}?transaction_details=true";
+            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
+        }
 
-            HttpResponseMessage response = await client.GetAsync(url);
+        string jsonResult = await response.Content.ReadAsStringAsync();
+        JObject json = JObject.Parse(jsonResult);
 
-            if (response.IsSuccessStatusCode)
+        var data = json["data"][cashAddr];
+        // only outgoing transactions are contract funding candidates
+        var transactions = data["transactions"].Where(x => x["balance_change"].ToString().StartsWith('-'));
+
+        List<Task<(string txid, string? contractId)>> tasks = new();
+
+        foreach (var tx in transactions)
+        {
+            string txid = tx["hash"].ToString();
+
+            if (contractsCache.ContainsKey(txid)) continue;
+            
+            tasks.Add(Task.Run(async () =>
             {
-                string jsonResult = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(jsonResult);
+                string txUrl = $"https://api.blockchair.com/bitcoin-cash/dashboards/transaction/{txid}";
+                HttpResponseMessage txResponse = await client.GetAsync(txUrl);
 
-                var data = json["data"][cashAddr];
-                // only outgoing transactions are contract funding candidates
-                var transactions = data["transactions"].Where(x=> x["balance_change"].ToString().StartsWith('-'));
-
-                List<Task<(string txid, string? contractId)>> tasks = new ();
-                
-                foreach (var tx in transactions)
+                if (!txResponse.IsSuccessStatusCode)
                 {
-                    string txid = tx["hash"].ToString();
+                    throw new Exception($"Error fetching transaction {txid}: {txResponse.ReasonPhrase}");
+                }
+                
+                string txJsonResult = await txResponse.Content.ReadAsStringAsync();
+                JObject txJson = JObject.Parse(txJsonResult);
 
-                    if (!contractsCache.ContainsKey(txid))
+                var outputs = txJson["data"][txid]["outputs"];
+
+                foreach (var output in outputs)
+                {
+                    string type = output["type"].ToString();
+
+                    if (type == "scripthash")
                     {
-                        tasks.Add(Task.Run(async () =>
-                        {
-                            string txUrl = $"https://api.blockchair.com/bitcoin-cash/dashboards/transaction/{txid}";
-                            HttpResponseMessage txResponse = await client.GetAsync(txUrl);
-
-                            if (txResponse.IsSuccessStatusCode)
-                            {
-                                string txJsonResult = await txResponse.Content.ReadAsStringAsync();
-                                JObject txJson = JObject.Parse(txJsonResult);
-
-                                var outputs = txJson["data"][txid]["outputs"];
-
-                                foreach (var output in outputs)
-                                {
-                                    string type = output["type"].ToString();
-
-                                    if (type == "scripthash")
-                                    {
-                                        var contractId = output["recipient"].ToString();
-                                        return (txid, contractId);
-                                    }
-                                }
-
-                                return (txid, null);
-                            }
-                            else
-                            {
-                                throw new Exception($"Error fetching transaction {txid}: {txResponse.ReasonPhrase}");
-                            }
-                        }));
+                        var contractId = output["recipient"].ToString();
+                        return (txid, contractId);
                     }
                 }
 
-                // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-                var newContracts = await Task.WhenAll(tasks);
-                var result = contractsCache.Values
-                    .Concat(newContracts.Select(x=>x.contractId))
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .Select(id => (string)id)
-                    .ToList();
-
-                foreach (var newContract in newContracts)
-                {
-                    contractsCache.Add(newContract.txid, newContract.contractId);
-                }
-                
-                return result;
-            }
-            else
-            {
-                throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
-            }
+                return (txid, null);
+            }));
         }
+
+        // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
+        var newContracts = await Task.WhenAll(tasks);
+        var result = contractsCache.Values
+            .Concat(newContracts.Select(x => x.contractId))
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => (string)id)
+            .ToList();
+
+        foreach (var newContract in newContracts)
+        {
+            contractsCache.Add(newContract.txid, newContract.contractId);
+        }
+
+        return result;
     }
 
     static string ToCashAddr(string legacyAddress)
