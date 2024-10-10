@@ -57,11 +57,18 @@ namespace AutoHedger
                 var contractAddresses = await AnyHedge.GetContractAddresses();
                 var contracts = await AnyHedge.GetContracts(contractAddresses);
                 Console.WriteLine("OK");
+                
+                Console.Write("Reading premiums ..");
+                const string counterLeverage = "5"; //only check 20% hedge
+                var premiumData = (await Premiums.GetPremiums(counterLeverage, 0))
+                    .Where(x => x.Apy >= AppSettings.MinimumApy)
+                    .ToList();
+                Console.WriteLine("OK");
 
                 foreach (var account in accounts)
                 {
                     Console.WriteLine(delimiterBold);
-                    await DisplayData(account, contracts);
+                    await DisplayData(account, contracts, premiumData.Where(x=>x.CurrencyOracleKey == account.OracleKey).ToList());
                 }
             }
             catch (Exception ex)
@@ -74,9 +81,8 @@ namespace AutoHedger
             //spinner.Start(); prevents scrolling :(
         }
 
-        private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts)
+        private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts, List<PremiumDataItem> premiumData)
         {
-            const string counterLeverage = "5"; //only check 20% hedge
 
             var oracleKey = account.OracleKey;
             OracleMetadata? oracleMetadata = account.OracleMetadata;
@@ -128,16 +134,12 @@ namespace AutoHedger
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
             }
 
-
-            var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))
-                .Where(x => x.Apy >= AppSettings.MinimumApy)
-                .ToList();
-            //Console.WriteLine("Sorted by amount:");
-            //DisplayPremiumsData(premiumData);
-            //Console.WriteLine("Sorted by duration:");
-            var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
             if (premiumData.Any())
             {
+                //Console.WriteLine("Sorted by amount:");
+                //DisplayPremiumsData(premiumData);
+                //Console.WriteLine("Sorted by duration:");
+                var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
                 Console.WriteLine(delimiter);
                 DisplayPremiumsData(premiumDataByDuration);
             }

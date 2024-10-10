@@ -7,7 +7,7 @@ namespace AnyHedgeNet
     {
         private static readonly HttpClient client = new HttpClient();
 
-        public static async Task<List<PremiumDataItem>> GetPremiums(string currency, string counterLeverage, double maximumPremium)
+        public static async Task<List<PremiumDataItem>> GetPremiums(string counterLeverage, double maximumPremium, string? currencyOracleKey = null)
         {
             string url = "https://premiums.anyhedge.com/api/v2/currentPremiumsV2";
             HttpResponseMessage response = await client.GetAsync(url);
@@ -21,47 +21,53 @@ namespace AnyHedgeNet
 
             var allData = JsonSerializer.Deserialize<Dictionary<string, CurrencyData>>(responseBody, options);
 
-            if (allData.TryGetValue(currency, out var currencyData))
+            var result = new List<PremiumDataItem>(allData.Count * 7 * 3);
+
+            foreach (var currencyData in allData)
             {
-                var premiumDataItems = currencyData.TakerHedge
-                    .SelectMany(amount => amount.Value
-                        .SelectMany(leverage => leverage.Value
-                            .Where(cl => cl.Key == counterLeverage)
-                            .SelectMany(cl => cl.Value
-                                .Where(x=>x.Value.Total<=maximumPremium)
-                                .Select(duration => 
-                                {
-                                    double durationInSeconds = double.Parse(duration.Key);
-                                    double durationInDays = durationInSeconds / 86400.0;
-                                    double yield = duration.Value.Total / -100;
-                                    double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
-
-                                    return new PremiumDataItem
-                                    {
-                                        Amount = decimal.Parse(amount.Key),
-                                        Leverage = double.Parse(leverage.Key),
-                                        CounterLeverage = double.Parse(cl.Key),
-                                        Duration = durationInDays,
-                                        PremiumInfo = duration.Value,
-                                        Apy = apy
-                                    };
-                                }))))
-                    .ToList();
-
-                var bestApyForAmount = premiumDataItems
-                    .GroupBy(item => item.Amount)
-                    .Select(group => group.OrderByDescending(item => item.Apy).First())
-                    .ToDictionary(item => item.Amount, item => item.Apy);
-
-                foreach (var item in premiumDataItems)
+                if (currencyOracleKey == null || currencyData.Key == currencyOracleKey)
                 {
-                    item.BestApyForAmount = item.Apy == bestApyForAmount[item.Amount];
-                }
+                    var premiumDataItems = currencyData.Value.TakerHedge
+                        .SelectMany(amount => amount.Value
+                            .SelectMany(leverage => leverage.Value
+                                .Where(cl => cl.Key == counterLeverage)
+                                .SelectMany(cl => cl.Value
+                                    .Where(x => x.Value.Total <= maximumPremium)
+                                    .Select(duration =>
+                                    {
+                                        double durationInSeconds = double.Parse(duration.Key);
+                                        double durationInDays = durationInSeconds / 86400.0;
+                                        double yield = duration.Value.Total / -100;
+                                        double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
 
-                return premiumDataItems;
+                                        return new PremiumDataItem
+                                        {
+                                            Amount = decimal.Parse(amount.Key),
+                                            Leverage = double.Parse(leverage.Key),
+                                            CounterLeverage = double.Parse(cl.Key),
+                                            Duration = durationInDays,
+                                            PremiumInfo = duration.Value,
+                                            Apy = apy
+                                        };
+                                    }))))
+                        .ToList();
+
+                    var bestApyForAmount = premiumDataItems
+                        .GroupBy(item => item.Amount)
+                        .Select(group => group.OrderByDescending(item => item.Apy).First())
+                        .ToDictionary(item => item.Amount, item => item.Apy);
+
+                    foreach (var item in premiumDataItems)
+                    {
+                        item.CurrencyOracleKey = currencyData.Key;
+                        item.BestApyForAmount = item.Apy == bestApyForAmount[item.Amount];
+                    }
+
+                    result.AddRange(premiumDataItems);
+                }
             }
 
-            return new List<PremiumDataItem>();
+            return result;
         }
     }
 
@@ -100,6 +106,8 @@ namespace AnyHedgeNet
         public double Duration;
         public PremiumData PremiumInfo;
         public double Apy;
+        
+        public string CurrencyOracleKey;
         public bool BestApyForAmount;
     }
 
