@@ -45,7 +45,8 @@ namespace AnyHedgeNet
                                             Amount = decimal.Parse(amount.Key),
                                             Leverage = double.Parse(leverage.Key),
                                             CounterLeverage = double.Parse(cl.Key),
-                                            Duration = durationInDays,
+                                            DurationSeconds = durationInSeconds,
+                                            DurationDays = durationInDays,
                                             PremiumInfo = duration.Value,
                                             Apy = apy
                                         };
@@ -103,7 +104,8 @@ namespace AnyHedgeNet
         public decimal Amount;
         public double Leverage;
         public double CounterLeverage;
-        public double Duration;
+        public double DurationSeconds;
+        public double DurationDays;
         public PremiumData PremiumInfo;
         public double Apy;
         

@@ -127,10 +127,10 @@ namespace AutoHedger
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
             Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} ({priceDelta.Format(2, 0, true)} %)");
-            Console.WriteLine(delimiter);
 
             if (account.Wallet.HasAddress || !string.IsNullOrEmpty(AppSettings.AccountKey))
             {
+                Console.WriteLine(delimiter);
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
             }
 
@@ -139,7 +139,7 @@ namespace AutoHedger
                 //Console.WriteLine("Sorted by amount:");
                 //DisplayPremiumsData(premiumData);
                 //Console.WriteLine("Sorted by duration:");
-                var premiumDataByDuration = premiumData.OrderBy(x => x.Duration).ToList();
+                var premiumDataByDuration = premiumData.OrderBy(x => x.DurationDays).ToList();
                 Console.WriteLine(delimiter);
                 DisplayPremiumsData(premiumDataByDuration);
             }
@@ -150,7 +150,7 @@ namespace AutoHedger
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
-                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.duration} days");
+                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.DurationDays} days");
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
                         await AnyHedge.CreateContract(account.Wallet.PrivateKeyWIF);
@@ -216,7 +216,7 @@ namespace AutoHedger
             {
                 rows.Add([
                     item.Amount.ToString(),
-                    item.Duration.ToString(),
+                    item.DurationDays.ToString(),
                     item.PremiumInfo.Total.ToString("F2"),
                     item.Apy.ToString("F2")
                 ]);
@@ -225,21 +225,22 @@ namespace AutoHedger
             ConsoleWidgets.DisplayTable(rows, borders: false);
         }
 
-        private static (decimal amount, double duration)? GetBestContractParameters(List<PremiumDataItem> premiumData, decimal walletBalanceBch)
+        private static (decimal amount, PremiumDataItem premiumDataItem)? GetBestContractParameters(List<PremiumDataItem> premiumData, decimal walletBalanceBch)
         {
             var candidates = premiumData
                 .GroupBy(x => x.Amount)
                 .ToList();
 
             var candidatesThatFitWholeBalance = candidates.Where(x => x.Key >= walletBalanceBch).ToList();
+            PremiumDataItem? bestCandidate;
             if (candidatesThatFitWholeBalance.Any())
             {
-                var bestDuration = candidatesThatFitWholeBalance.OrderBy(x => x.Key).First().OrderBy(x => x.Apy).Last().Duration;
-                return (walletBalanceBch, bestDuration);
+                bestCandidate = candidatesThatFitWholeBalance.OrderBy(x => x.Key).First().OrderBy(x => x.Apy).Last();
+                return (walletBalanceBch, bestCandidate);
             }
 
-            var bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Apy).Last();
-            return (bestCandidate.Amount, bestCandidate.Duration);
+            bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Apy).Last();
+            return (bestCandidate.Amount, bestCandidate);
         }
     }
 }
