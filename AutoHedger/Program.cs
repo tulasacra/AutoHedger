@@ -71,7 +71,7 @@ namespace AutoHedger
 
             Console.WriteLine(delimiterBold);
             Console.Write("Press [Q] to exit the program.. ");
-            spinner.Start();
+            //spinner.Start(); prevents scrolling :(
         }
 
         private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts)
@@ -86,7 +86,7 @@ namespace AutoHedger
             decimal? walletBalance = null;
             try
             {
-                if (!string.IsNullOrEmpty(account.Wallet.Address) && account.Wallet.Address != "bitcoincash:")
+                if (account.Wallet.HasAddress)
                 {
                     var bchClient = new BitcoinCashClient();
                     walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
@@ -123,7 +123,10 @@ namespace AutoHedger
             Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} ({priceDelta.Format(2, 0, true)} %)");
             Console.WriteLine(delimiter);
 
-            DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
+            if (account.Wallet.HasAddress || !string.IsNullOrEmpty(AppSettings.AccountKey))
+            {
+                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
+            }
 
 
             var premiumData = (await Premiums.GetPremiums(oracleKey, counterLeverage, 0))

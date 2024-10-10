@@ -33,5 +33,7 @@ namespace AutoHedger
         public Currency Currency { get; set; }
         public string Address { get; set; }
         public string PrivateKeyWIF { get; set; }
+        
+        public bool HasAddress => !string.IsNullOrEmpty(Address) && Address != "bitcoincash:";
     }
 }

@@ -100,6 +100,11 @@ public class AnyHedgeManager
 
     public async Task<List<string>> GetContractAddresses()
     {
+        if (string.IsNullOrEmpty(accountPrivateKeyWIF))
+        {
+            return new List<string>(0);
+        }
+        
         Network network = Network.Main;
         BitcoinSecret secret = new BitcoinSecret(accountPrivateKeyWIF, network);
         PubKey pubKey = secret.PubKey;
