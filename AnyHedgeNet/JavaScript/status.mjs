@@ -2,8 +2,8 @@
 import { AnyHedgeManager } from '@generalprotocols/anyhedge';
 
 // Contract address for the contract you want to get status for.
-const CONTRACT_ADDRESS = process.argv[3];
-const privateKeyWIF = process.argv[4];
+const CONTRACT_ADDRESS = process.argv[4];
+const privateKeyWIF = process.argv[3];
 
 // Set which settlement service to use in this example.
 // DEFAULT: https and api.anyhedge.com

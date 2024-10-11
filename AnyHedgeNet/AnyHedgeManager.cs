@@ -1,3 +1,4 @@
+using System.Globalization;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -30,7 +31,7 @@ public class AnyHedgeManager
             {
                 WorkingDirectory = "JavaScript",
                 FileName = "node",
-                Arguments = $"status.mjs {authenticationToken} {ToCashAddr(contractAddress)} {accountPrivateKeyWIF}",
+                Arguments = $"status.mjs {authenticationToken} {accountPrivateKeyWIF} {ToCashAddr(contractAddress)}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -59,20 +60,30 @@ public class AnyHedgeManager
         }
     }
     
-    public async Task<Contract> CreateContract(string privateKeyWIF)
+    public async Task<Contract> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
     {
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            WorkingDirectory = "JavaScript",
+            FileName = "node",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        
+        startInfo.ArgumentList.Add("liquidity-provider.mjs");
+        startInfo.ArgumentList.Add(authenticationToken);
+        startInfo.ArgumentList.Add(accountPrivateKeyWIF);
+        startInfo.ArgumentList.Add(payoutAddress);
+        startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(oracleKey);
+        //startInfo.ArgumentList.Add(TimeSpan.FromDays(durationDays).TotalSeconds.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
+        
         var process = new System.Diagnostics.Process
         {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                WorkingDirectory = "JavaScript",
-                FileName = "node",
-                Arguments = $"liquidity-provider.mjs {authenticationToken} {privateKeyWIF}",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
+            StartInfo = startInfo
         };
 
         process.Start();

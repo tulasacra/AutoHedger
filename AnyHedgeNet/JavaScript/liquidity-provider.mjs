@@ -12,23 +12,25 @@ import { calculateRequiredFundingSatoshisPerSide } from './utils/anyhedge.mjs';
 import { fetchJSONGetRequest, fetchJSONPostRequest, fetchCurrentOracleMessageAndSignature, fetchUnspentTransactionOutputs } from './utils/network.mjs';
 
 // Set how many US cents that Short would like to protect against price volatility.
-const NOMINAL_UNITS = 100;
+const NOMINAL_UNITS = process.argv[5];
 
 // Set the oracle public key to one that you know is operational and available. This is the production USD price oracle.
-const ORACLE_PUBLIC_KEY = '02d09db08af1ff4e8453919cc866a4be427d7bfe18f2c05e5444c196fcf6fd2818';
+const ORACLE_PUBLIC_KEY = process.argv[6];
 
 // Set the contract duration in seconds, after which the contract is matured.
 // NOTE: 10800 = 3 hours * 60 minutes * 60 seconds.
 // NOTE: Liquidity provider requires contracts to be at least a two hours long, and
 //       won't settle contract early when they are less than two hours from maturity.
-const CONTRACT_DURATION_IN_SECONDS = BigInt('10800');
+const CONTRACT_DURATION_IN_SECONDS = BigInt(process.argv[7]);
 
 // Set the multipliers for how much the price can change before the contract is liquidated.
 // For example assuming the price today is $300 then:
 //   if low multiplier = 0.75, the low liquidation price will be $300 * 0.75 = $225.
 //   if high multiplier = 10, the high liquidation price will be $300 * 10 = $3,000.
-const CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER = 0.75;
+const CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER = 0.8;
 const CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER = 10.00;
+
+const taker_payout_address = process.argv[4]; //todo
 
 // The contract requires addresses for payout and public keys for validating mutual redemptions.
 // Set these values to compressed WIF keys that you control and the example will use it for the public key and address.

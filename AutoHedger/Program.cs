@@ -153,7 +153,10 @@ namespace AutoHedger
                     Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.DurationDays} days");
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
-                        await AnyHedge.CreateContract(account.Wallet.PrivateKeyWIF);
+                        // await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
+                        //     bestContractParameters.Value.amount * latestPrice * oracleMetadata.ATTESTATION_SCALING,
+                        //     account.OracleKey,
+                        //     bestContractParameters.Value.premiumDataItem.DurationSeconds);
                     }
                 }
             }
