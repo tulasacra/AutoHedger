@@ -107,7 +107,58 @@ public class AnyHedgeManager
         }
     }
 
-    private static Dictionary<string, string?> contractsCache = new(); 
+    private static Dictionary<string, string?> contractsCache = new();
+
+    private async Task<IEnumerable<string>> GetTxIds_blockchair(string cashAddr)
+    {
+        using HttpClient client = new HttpClient();
+        string url = $"https://api.blockchair.com/bitcoin-cash/dashboards/address/{cashAddr}?transaction_details=true";
+        HttpResponseMessage response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
+        }
+
+        string jsonResult = await response.Content.ReadAsStringAsync();
+        JObject json = JObject.Parse(jsonResult);
+
+        var data = json["data"][cashAddr];
+        var txIds = data["transactions"]
+            .Where(delegate(JToken tx)
+            {
+                string txid = tx["hash"].ToString();
+                // only outgoing transactions are contract funding candidates
+                return tx["balance_change"].ToString().StartsWith('-') && !contractsCache.ContainsKey(txid);
+            })
+            .Select(tx=> tx["hash"].ToString());
+
+        return txIds;
+    }
+    
+    private async Task<IEnumerable<string>> GetTxIds_fullstack(string legacyAddress)
+    {
+        using HttpClient client = new HttpClient();
+        string url = $"https://api.fullstack.cash/v5/electrumx/transactions/{legacyAddress}";
+        HttpResponseMessage response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
+        }
+
+        string jsonResult = await response.Content.ReadAsStringAsync();
+        JObject json = JObject.Parse(jsonResult);
+
+        var txIds = json["transactions"]
+            .Where(delegate(JToken tx)
+            {
+                string txid = tx["tx_hash"].ToString();
+                return !contractsCache.ContainsKey(txid);
+            })
+            .Select(tx=> tx["tx_hash"].ToString());
+
+        return txIds;
+    }
+    
 
     public async Task<List<string>> GetContractAddresses()
     {
@@ -122,61 +173,55 @@ public class AnyHedgeManager
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
         string cashAddr = ToCashAddr(legacyAddress.ToString());
 
+        //var txIds = await GetTxIds_blockchair(cashAddr);
+        var txIds = await GetTxIds_fullstack(legacyAddress.ToString());
+
+        List<Task<List<(string txid, string? contractId)>>> tasks = new();
         using HttpClient client = new HttpClient();
-        string url = $"https://api.blockchair.com/bitcoin-cash/dashboards/address/{cashAddr}?transaction_details=true";
-        HttpResponseMessage response = await client.GetAsync(url);
-        if (!response.IsSuccessStatusCode)
+
+        foreach (var txids in txIds.Chunk(10))
         {
-            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
-        }
-
-        string jsonResult = await response.Content.ReadAsStringAsync();
-        JObject json = JObject.Parse(jsonResult);
-
-        var data = json["data"][cashAddr];
-        // only outgoing transactions are contract funding candidates
-        var transactions = data["transactions"].Where(x => x["balance_change"].ToString().StartsWith('-'));
-
-        List<Task<(string txid, string? contractId)>> tasks = new();
-
-        foreach (var tx in transactions)
-        {
-            string txid = tx["hash"].ToString();
-
-            if (contractsCache.ContainsKey(txid)) continue;
-            
             tasks.Add(Task.Run(async () =>
             {
-                string txUrl = $"https://api.blockchair.com/bitcoin-cash/dashboards/transaction/{txid}";
+                string txUrl = $"https://api.blockchair.com/bitcoin-cash/dashboards/transactions/{string.Join(',', txids)}";
                 HttpResponseMessage txResponse = await client.GetAsync(txUrl);
 
                 if (!txResponse.IsSuccessStatusCode)
                 {
-                    throw new Exception($"Error fetching transaction {txid}: {txResponse.ReasonPhrase}");
+                    throw new Exception($"Error fetching transactions: {txResponse.ReasonPhrase}");
                 }
                 
                 string txJsonResult = await txResponse.Content.ReadAsStringAsync();
                 JObject txJson = JObject.Parse(txJsonResult);
 
-                var outputs = txJson["data"][txid]["outputs"];
-
-                foreach (var output in outputs)
+                var results = new List<(string txId, string? contractId)>();
+                foreach (JProperty tx in txJson["data"])
                 {
-                    string type = output["type"].ToString();
+                    //var txid = tx["transaction"]["hash"].ToString();
+                    var txid = tx.Name;
+                    var outputs = tx.Value["outputs"];
 
-                    if (type == "scripthash")
+                    string? contractId = null;
+                    foreach (var output in outputs)
                     {
-                        var contractId = output["recipient"].ToString();
-                        return (txid, contractId);
-                    }
-                }
+                        string type = output["type"].ToString();
 
-                return (txid, null);
+                        if (type == "scripthash")
+                        {
+                            contractId = output["recipient"].ToString();
+                            break;
+                        }
+                    }
+
+                    results.Add((txid, contractId));
+                }
+                
+                return results;
             }));
         }
 
         // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-        var newContracts = await Task.WhenAll(tasks);
+        var newContracts = (await Task.WhenAll(tasks)).SelectMany(x => x);
         var result = contractsCache.Values
             .Concat(newContracts.Select(x => x.contractId))
             .Where(id => !string.IsNullOrEmpty(id))
