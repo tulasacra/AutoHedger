@@ -9,7 +9,7 @@ namespace AutoHedger
     {
         private static Timer timer;
         const int Minutes = 15;
-        
+
         private static readonly Spinner spinner = new Spinner();
 
         private const string delimiter = "-------------------------------------------------------------------------------------";
@@ -22,14 +22,14 @@ namespace AutoHedger
 
             Console.Write("Reading OracleMetadata ..");
             CurrencyConfig[] accounts = await CurrencyConfig.Get(AppSettings.Wallets);
-            
+
             timer = new Timer(TimeSpan.FromMinutes(Minutes));
             timer.Elapsed += async (sender, e) => await DisplayData(accounts);
             timer.AutoReset = true;
             timer.Enabled = true;
-            
+
             await DisplayData(accounts);
-            
+
             while (true)
             {
                 if (Console.KeyAvailable)
@@ -40,6 +40,7 @@ namespace AutoHedger
                         break;
                     }
                 }
+
                 await Task.Delay(100);
             }
         }
@@ -57,7 +58,7 @@ namespace AutoHedger
                 var contractAddresses = await AnyHedge.GetContractAddresses();
                 var contracts = await AnyHedge.GetContracts(contractAddresses);
                 Console.WriteLine("OK");
-                
+
                 Console.Write("Reading premiums ..");
                 const string counterLeverage = "5"; //only check 20% hedge
                 var premiumData = (await Premiums.GetPremiums(counterLeverage, 0)).ToList();
@@ -66,7 +67,7 @@ namespace AutoHedger
                 foreach (var account in accounts)
                 {
                     Console.WriteLine(delimiterBold);
-                    await DisplayData(account, contracts, premiumData.Where(x=>x.CurrencyOracleKey == account.OracleKey).ToList());
+                    await DisplayData(account, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList());
                 }
             }
             catch (Exception ex)
@@ -81,7 +82,6 @@ namespace AutoHedger
 
         private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts, List<PremiumDataItem> premiumData)
         {
-
             var oracleKey = account.OracleKey;
             OracleMetadata? oracleMetadata = account.OracleMetadata;
             decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
@@ -105,22 +105,16 @@ namespace AutoHedger
             decimal? contractsBalanceBch = null;
             decimal? contractsBalance = null;
             decimal? bchAcquisitionCostFifo = null;
-            try
-            {
-                var activeContracts = contracts
-                    .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-                    .Where(x => x.Fundings[0].Settlement == null).ToList();
-                var settledContracts = contracts
-                    .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-                    .Where(x => x.Fundings[0].Settlement != null).ToList();
-                contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
-                contractsBalanceBch = contractsBalance / latestPrice;
-                bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
-            }
-            catch (Exception ex)
-            {
-                ConsoleWidgets.WriteLine($"Error getting contract balance: {ex.Message}", ConsoleColor.Red);
-            }
+
+            var activeContracts = contracts
+                .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+                .Where(x => x.Fundings[0].Settlement == null).ToList();
+            var settledContracts = contracts
+                .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+                .Where(x => x.Fundings[0].Settlement != null).ToList();
+            contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
+            contractsBalanceBch = contractsBalance / latestPrice;
+            bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
 
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
@@ -246,12 +240,12 @@ namespace AutoHedger
             foreach (var item in premiumData)
             {
                 rows.Add([
-                        item.Amount.ToString(),
-                        item.DurationDays.ToString(),
-                        item.PremiumInfo.Total.ToString("F2"),
-                        item.Apy.ToString("F2"),
-                        item.ApyPlusPriceDelta.Format(2)
-                    ]);
+                    item.Amount.ToString(),
+                    item.DurationDays.ToString(),
+                    item.PremiumInfo.Total.ToString("F2"),
+                    item.Apy.ToString("F2"),
+                    item.ApyPlusPriceDelta.Format(2)
+                ]);
             }
 
             ConsoleWidgets.DisplayTable(rows, borders: false);
