@@ -211,7 +211,7 @@ namespace AutoHedger
                 remainingBalance -= contractAmount;
             }
 
-            return totalCost / walletBalance;
+            return totalCost / (walletBalance - remainingBalance);
         }
 
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
