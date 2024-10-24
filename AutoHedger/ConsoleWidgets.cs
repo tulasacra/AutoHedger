@@ -1,8 +1,8 @@
 using Timer = System.Timers.Timer;
 
-namespace AutoHedger;
+namespace ConsoleWidgets;
 
-public static class ConsoleWidgets
+public static class Widgets
 {
     public static void DisplayTable(List<List<string>> rows, bool firstRowIsHeaders = true, bool borders = true)
     {
@@ -104,5 +104,62 @@ public class Spinner
         Console.SetCursorPosition(originalLeft, originalTop);
 
         currentFrame = (currentFrame + 1) % frames.Length;
+    }
+}
+
+public class Menu
+{
+    private readonly Dictionary<ConsoleKey, (string Description, Action Action)> menuOptions;
+    private readonly ConsoleKey exitOptionKey;
+    private readonly string exitOptionDescription;
+
+    public Menu(ConsoleKey exitOptionKey = ConsoleKey.Q, string exitOptionDescription = "Quit")
+    {
+        this.exitOptionKey = exitOptionKey;
+        this.exitOptionDescription = exitOptionDescription;
+        menuOptions = new Dictionary<ConsoleKey, (string, Action)>();
+    }
+    public void AddOption(ConsoleKey key, string description, Action action)
+    {
+        if (menuOptions.ContainsKey(key) || exitOptionKey == key)
+            throw new ArgumentException($"An option with the key '{key}' already exists.", nameof(key));
+
+        menuOptions[key] = (description, action);
+    }
+
+    public void Show()
+    {
+        foreach (var option in menuOptions)
+        {
+            Console.WriteLine($"[{option.Key}] {option.Value.Description}");
+        }
+
+        Console.WriteLine($"[{exitOptionKey}] {exitOptionDescription}");
+    }
+
+    /// <summary>
+    /// Starts the menu loop, waits for keypresses, and executes the corresponding action.
+    /// </summary>
+    public async Task Start()
+    {
+        while (true)
+        {
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true).Key;
+
+                if (key == exitOptionKey)
+                {
+                    break;
+                }
+
+                if (menuOptions.ContainsKey(key))
+                {
+                    menuOptions[key].Action.Invoke();
+                }
+            }
+
+            await Task.Delay(100);
+        }
     }
 }

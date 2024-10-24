@@ -1,5 +1,6 @@
 ﻿using AnyHedgeNet;
 using BitcoinCash;
+using ConsoleWidgets;
 using OraclesCash;
 using Timer = System.Timers.Timer;
 
@@ -15,6 +16,8 @@ namespace AutoHedger
         private const string delimiter = "-------------------------------------------------------------------------------------";
         private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
         private static AnyHedgeManager AnyHedge;
+        private static Menu Menu = new();
+
 
         static async Task Main(string[] args)
         {
@@ -23,26 +26,20 @@ namespace AutoHedger
             Console.Write("Reading OracleMetadata ..");
             CurrencyConfig[] accounts = await CurrencyConfig.Get(AppSettings.Wallets);
 
+            async void Refresh()
+            {
+                await DisplayData(accounts);
+            }
+
             timer = new Timer(TimeSpan.FromMinutes(Minutes));
-            timer.Elapsed += async (sender, e) => await DisplayData(accounts);
+            timer.Elapsed += async (sender, e) => Refresh();
             timer.AutoReset = true;
             timer.Enabled = true;
 
-            await DisplayData(accounts);
+            Menu.AddOption(ConsoleKey.R, "Refresh", Refresh);
 
-            while (true)
-            {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.Q)
-                    {
-                        break;
-                    }
-                }
-
-                await Task.Delay(100);
-            }
+            Refresh();
+            await Menu.Start();
         }
 
         private static async Task DisplayData(CurrencyConfig[] accounts)
@@ -72,11 +69,11 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                ConsoleWidgets.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex}", ConsoleColor.Red);
+                Widgets.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex}", ConsoleColor.Red);
             }
 
             Console.WriteLine(delimiterBold);
-            Console.Write("Press [Q] to exit the program.. ");
+            Menu.Show();
             //spinner.Start(); prevents scrolling :(
         }
 
@@ -99,7 +96,7 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                ConsoleWidgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
+                Widgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
             }
 
             decimal? contractsBalanceBch = null;
@@ -230,7 +227,7 @@ namespace AutoHedger
                 ["Total balance:           ", totalBch.Format(), (walletBalance + contractsBalance).Format(assetDecimals), ""]
             ];
 
-            ConsoleWidgets.DisplayTable(rows, borders: false);
+            Widgets.DisplayTable(rows, borders: false);
         }
 
         private static void DisplayPremiumsData(List<PremiumDataItemPlus> premiumData)
@@ -248,7 +245,7 @@ namespace AutoHedger
                 ]);
             }
 
-            ConsoleWidgets.DisplayTable(rows, borders: false);
+            Widgets.DisplayTable(rows, borders: false);
         }
 
         private static (decimal amount, PremiumDataItem premiumDataItem)? GetBestContractParameters(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
