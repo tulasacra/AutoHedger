@@ -1,4 +1,5 @@
-﻿using AnyHedgeNet;
+﻿using System.Text;
+using AnyHedgeNet;
 using BitcoinCash;
 using ConsoleWidgets;
 using OraclesCash;
@@ -21,6 +22,7 @@ namespace AutoHedger
 
         static async Task Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
             AnyHedge = new AnyHedgeManager(AppSettings.AccountKey);
 
             Console.Write("Reading OracleMetadata ..");
@@ -115,7 +117,7 @@ namespace AutoHedger
 
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} ({priceDelta.Format(2, 0, true)} %)");
+            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} (Δ {priceDelta.Format(2, 0, true)} %)");
 
             if (account.Wallet.HasAddress || !string.IsNullOrEmpty(AppSettings.AccountKey))
             {
@@ -232,16 +234,16 @@ namespace AutoHedger
 
         private static void DisplayPremiumsData(List<PremiumDataItemPlus> premiumData)
         {
-            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Premium (%)", "APY (%)", "APY + price diff (%)"]];
+            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Yield (%)", "APY (%)", "APY + Δ (%)"]];
 
             foreach (var item in premiumData)
             {
                 rows.Add([
                     item.Amount.ToString(),
                     item.DurationDays.ToString(),
-                    item.PremiumInfo.Total.ToString("F2"),
+                    (item.PremiumInfo.Total * -1).ToString("F2"),
                     item.Apy.ToString("F2"),
-                    item.ApyPlusPriceDelta.Format(2)
+                    item.ApyPlusPriceDelta.Format(2, 0)
                 ]);
             }
 
