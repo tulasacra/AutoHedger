@@ -37,8 +37,7 @@ namespace AnyHedgeNet
                                     {
                                         double durationInSeconds = double.Parse(duration.Key);
                                         double durationInDays = durationInSeconds / 86400.0;
-                                        double yield = duration.Value.Total / -100;
-                                        double apy = (Math.Pow(1 + yield, 365 / durationInDays) - 1) * 100;
+                                        double yieldInFractions = duration.Value.Total / -100;
 
                                         return new PremiumDataItem
                                         {
@@ -48,7 +47,8 @@ namespace AnyHedgeNet
                                             DurationSeconds = durationInSeconds,
                                             DurationDays = durationInDays,
                                             PremiumInfo = duration.Value,
-                                            Apy = apy
+                                            Yield = yieldInFractions * 100,
+                                            Apy = YieldToApy(yieldInFractions, durationInDays),
                                         };
                                     }))))
                         .ToList();
@@ -70,7 +70,14 @@ namespace AnyHedgeNet
 
             return result;
         }
+        
+        public static double YieldToApy(double yieldInFractions, double durationInDays)
+        {
+            return (Math.Pow(1 + yieldInFractions, 365 / durationInDays) - 1) * 100;
+        }
     }
+  
+
 
     public enum Currency
     {
@@ -107,6 +114,7 @@ namespace AnyHedgeNet
         public double DurationSeconds;
         public double DurationDays;
         public PremiumData PremiumInfo;
+        public double Yield;
         public double Apy;
         
         public string CurrencyOracleKey;

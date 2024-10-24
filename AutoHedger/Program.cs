@@ -127,7 +127,7 @@ namespace AutoHedger
 
             var premiumDataPlus = premiumData
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
-                .Where(x => x.Apy >= AppSettings.MinimumApy || x.ApyPlusPriceDelta >= (decimal?)AppSettings.MinimumApy)
+                .Where(x => x.Item.Apy >= AppSettings.MinimumApy || x.ApyPlusPriceDelta >= (decimal?)AppSettings.MinimumApy)
                 .ToList();
 
             if (premiumDataPlus.Any())
@@ -135,7 +135,7 @@ namespace AutoHedger
                 //Console.WriteLine("Sorted by amount:");
                 //DisplayPremiumsData(premiumData);
                 //Console.WriteLine("Sorted by duration:");
-                var premiumDataByDuration = premiumDataPlus.OrderBy(x => x.DurationDays).ToList();
+                var premiumDataByDuration = premiumDataPlus.OrderBy(x => x.Item.DurationDays).ToList();
                 Console.WriteLine(delimiter);
                 DisplayPremiumsData(premiumDataByDuration);
             }
@@ -146,7 +146,7 @@ namespace AutoHedger
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
-                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.DurationDays} days");
+                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days");
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
                         // await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
@@ -158,28 +158,18 @@ namespace AutoHedger
             }
         }
 
-        class PremiumDataItemPlus : PremiumDataItem
+        class PremiumDataItemPlus
         {
+            public PremiumDataItem Item;
             public decimal? ApyPlusPriceDelta;
 
-            public PremiumDataItemPlus(PremiumDataItem premiumData, decimal? priceDelta)
+            public PremiumDataItemPlus(PremiumDataItem item, decimal? priceDelta)
             {
-                Amount = premiumData.Amount;
-                Leverage = premiumData.Leverage;
-                CounterLeverage = premiumData.CounterLeverage;
-                DurationSeconds = premiumData.DurationSeconds;
-                DurationDays = premiumData.DurationDays;
-                PremiumInfo = new PremiumData
+                this.Item = item;
+                if (priceDelta.HasValue)
                 {
-                    Total = premiumData.PremiumInfo.Total,
-                    LiquidityPremium = premiumData.PremiumInfo.LiquidityPremium,
-                    SettlementServiceFee = premiumData.PremiumInfo.SettlementServiceFee
-                };
-                Apy = premiumData.Apy;
-                CurrencyOracleKey = premiumData.CurrencyOracleKey;
-                BestApyForAmount = premiumData.BestApyForAmount;
-
-                ApyPlusPriceDelta = (decimal)this.Apy + priceDelta;
+                    this.ApyPlusPriceDelta = (decimal)item.Apy + priceDelta;
+                }
             }
         }
 
@@ -239,33 +229,33 @@ namespace AutoHedger
             foreach (var item in premiumData)
             {
                 rows.Add([
-                    item.Amount.ToString(),
-                    item.DurationDays.ToString(),
-                    (item.PremiumInfo.Total * -1).ToString("F2"),
-                    item.Apy.ToString("F2"),
-                    item.ApyPlusPriceDelta.Format(2, 0)
+                    item.Item.Amount.ToString(),
+                    item.Item.DurationDays.ToString(),
+                    item.Item.Yield.ToString("F2"),
+                    item.Item.Apy.ToString("F2"),
+                    item.ApyPlusPriceDelta.Format(2, 0),
                 ]);
             }
 
             Widgets.DisplayTable(rows, borders: false);
         }
 
-        private static (decimal amount, PremiumDataItem premiumDataItem)? GetBestContractParameters(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
+        private static (decimal amount, PremiumDataItemPlus premiumDataItem)? GetBestContractParameters(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
         {
             var candidates = premiumData
-                .GroupBy(x => x.Amount)
+                .GroupBy(x => x.Item.Amount)
                 .ToList();
 
             var candidatesThatFitWholeBalance = candidates.Where(x => x.Key >= walletBalanceBch).ToList();
-            PremiumDataItem? bestCandidate;
+            PremiumDataItemPlus? bestCandidate;
             if (candidatesThatFitWholeBalance.Any())
             {
-                bestCandidate = candidatesThatFitWholeBalance.OrderBy(x => x.Key).First().OrderBy(x => x.Apy).Last();
+                bestCandidate = candidatesThatFitWholeBalance.OrderBy(x => x.Key).First().OrderBy(x => x.Item.Apy).Last();
                 return (walletBalanceBch, bestCandidate);
             }
 
-            bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Apy).Last();
-            return (bestCandidate.Amount, bestCandidate);
+            bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Item.Apy).Last();
+            return (bestCandidate.Item.Amount, bestCandidate);
         }
     }
 }
