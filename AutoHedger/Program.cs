@@ -127,7 +127,9 @@ namespace AutoHedger
 
             var premiumDataPlus = premiumData
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
-                .Where(x => x.Item.Apy >= AppSettings.MinimumApy || x.ApyPlusPriceDelta >= (decimal?)AppSettings.MinimumApy)
+                .Where(x => x.Item.Apy >= AppSettings.MinimumApy ||
+                            x.ApyPlusPriceDelta >= (decimal?)AppSettings.MinimumApy ||
+                            x.YieldPlusPriceDeltaAnnualized >= (decimal?)AppSettings.MinimumApy)
                 .ToList();
 
             if (premiumDataPlus.Any())
@@ -162,6 +164,7 @@ namespace AutoHedger
         {
             public PremiumDataItem Item;
             public decimal? ApyPlusPriceDelta;
+            public decimal? YieldPlusPriceDeltaAnnualized;
 
             public PremiumDataItemPlus(PremiumDataItem item, decimal? priceDelta)
             {
@@ -169,6 +172,7 @@ namespace AutoHedger
                 if (priceDelta.HasValue)
                 {
                     this.ApyPlusPriceDelta = (decimal)item.Apy + priceDelta;
+                    this.YieldPlusPriceDeltaAnnualized = (decimal?)Premiums.YieldToApy((item.Yield + (double)priceDelta.Value) / 100, item.DurationDays);
                 }
             }
         }
@@ -224,7 +228,7 @@ namespace AutoHedger
 
         private static void DisplayPremiumsData(List<PremiumDataItemPlus> premiumData)
         {
-            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Yield (%)", "APY (%)", "APY + Δ (%)"]];
+            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Yield (%)", "APY (%)", "APY + Δ (%)", "AP(Y+Δ) (%)"]];
 
             foreach (var item in premiumData)
             {
@@ -234,6 +238,7 @@ namespace AutoHedger
                     item.Item.Yield.ToString("F2"),
                     item.Item.Apy.ToString("F2"),
                     item.ApyPlusPriceDelta.Format(2, 0),
+                    item.YieldPlusPriceDeltaAnnualized.Format(2, 0),
                 ]);
             }
 
