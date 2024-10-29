@@ -139,7 +139,7 @@ namespace AutoHedger
                 //Console.WriteLine("Sorted by duration:");
                 var premiumDataByDuration = premiumDataPlus.OrderBy(x => x.Item.DurationDays).ToList();
                 Console.WriteLine(delimiter);
-                DisplayPremiumsData(premiumDataByDuration);
+                DisplayPremiumsData(premiumDataByDuration, priceDelta);
             }
 
             if (walletBalanceBch.HasValue && premiumDataPlus.Any() && !(priceDelta < 0))
@@ -226,20 +226,41 @@ namespace AutoHedger
             Widgets.DisplayTable(rows, borders: false);
         }
 
-        private static void DisplayPremiumsData(List<PremiumDataItemPlus> premiumData)
+        private static void DisplayPremiumsData(List<PremiumDataItemPlus> premiumData, decimal? priceDelta)
         {
-            List<List<string>> rows = [["Amount (BCH)", "Duration (days)", "Yield (%)", "APY (%)", "APY + Δ (%)", "AP(Y+Δ) (%)"]];
+            List<string> headers = ["Amount (BCH)", "Duration (days)", "Yield (%)", "APY (%)"];
+            switch (priceDelta)
+            {
+                case > 0:
+                    headers.Add("APY + Δ (%)");
+                    break;
+                case < 0:
+                    headers.Add("AP(Y+Δ) (%)");
+                    break;
+            }
+
+            List<List<string>> rows = [headers];
 
             foreach (var item in premiumData)
             {
-                rows.Add([
+                List<string> row = [
                     item.Item.Amount.ToString(),
                     item.Item.DurationDays.ToString(),
                     item.Item.Yield.ToString("F2"),
                     item.Item.Apy.ToString("F2"),
-                    item.ApyPlusPriceDelta.Format(2, 0),
-                    item.YieldPlusPriceDeltaAnnualized.Format(2, 0),
-                ]);
+                ];
+                
+                switch (priceDelta)
+                {
+                    case > 0:
+                        row.Add(item.ApyPlusPriceDelta.Format(2, 0));
+                        break;
+                    case < 0:
+                        row.Add(item.YieldPlusPriceDeltaAnnualized.Format(2, 0));
+                        break;
+                }
+                
+                rows.Add(row);
             }
 
             Widgets.DisplayTable(rows, borders: false);
