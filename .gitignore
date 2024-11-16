@@ -7,3 +7,4 @@ riderModule.iml
 api references
 **/appsettings.*.json
 node_modules
+*.user

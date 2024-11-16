@@ -144,7 +144,7 @@ namespace AutoHedger
 
             if (walletBalanceBch.HasValue && premiumDataPlus.Any() && !(priceDelta < 0))
             {
-                var bestContractParameters = GetBestContractParameters(premiumDataPlus, walletBalanceBch.Value);
+                var bestContractParameters = GetBestContractParameters_MaxApy(premiumDataPlus, walletBalanceBch.Value);
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
@@ -160,7 +160,7 @@ namespace AutoHedger
             }
         }
 
-        class PremiumDataItemPlus
+        internal class PremiumDataItemPlus
         {
             public PremiumDataItem Item;
             public decimal? ApyPlusPriceDelta;
@@ -266,7 +266,7 @@ namespace AutoHedger
             Widgets.DisplayTable(rows, borders: false);
         }
 
-        private static (decimal amount, PremiumDataItemPlus premiumDataItem)? GetBestContractParameters(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
+        private static (decimal amount, PremiumDataItemPlus premiumDataItem)? GetBestContractParameters_MaxAmount(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
         {
             var candidates = premiumData
                 .GroupBy(x => x.Item.Amount)
@@ -282,6 +282,25 @@ namespace AutoHedger
 
             bestCandidate = candidates.OrderBy(x => x.Key).Last().OrderBy(x => x.Item.Apy).Last();
             return (bestCandidate.Item.Amount, bestCandidate);
+        }
+
+        internal static (decimal amount, PremiumDataItemPlus premiumDataItem)? GetBestContractParameters_MaxApy(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
+        {
+            var bestCandidate = premiumData.MaxBy(x=>x.Item.Apy)!;
+
+            var upgradeCandidate = premiumData
+                .Where(x =>
+                    x.Item.BestApyForAmount &&
+                    x.Item.DurationDays == bestCandidate.Item.DurationDays &&
+                    x.Item.Amount > bestCandidate.Item.Amount)
+                .MaxBy(x => x.Item.Amount);
+
+            if (upgradeCandidate != null)
+            {
+                bestCandidate = upgradeCandidate;
+            }
+
+            return (Math.Min(bestCandidate.Item.Amount, walletBalanceBch), bestCandidate);
         }
     }
 }
