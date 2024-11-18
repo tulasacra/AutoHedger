@@ -12,7 +12,7 @@ import { calculateRequiredFundingSatoshisPerSide } from './utils/anyhedge.mjs';
 import { fetchJSONGetRequest, fetchJSONPostRequest, fetchCurrentOracleMessageAndSignature, fetchUnspentTransactionOutputs } from './utils/network.mjs';
 
 // Set how many US cents that Short would like to protect against price volatility.
-const NOMINAL_UNITS = process.argv[5];
+const NOMINAL_UNITS = parseFloat(process.argv[5]);
 
 // Set the oracle public key to one that you know is operational and available. This is the production USD price oracle.
 const ORACLE_PUBLIC_KEY = process.argv[6];
@@ -130,8 +130,16 @@ const example = async function()
 	const proposeContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/proposeContract`;
 	const proposeContractArguments = { contractCreationParameters };
 
+	const replaceBigInt = (key, value) =>
+		typeof value === 'bigint' ? value.toString() : value;
+
+	//console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
+
 	// Send the contract proposal to the liquidity provider.
 	const proposeContractResponse = await fetchJSONPostRequest(proposeContractUrl, proposeContractArguments);
+	if (proposeContractResponse.errors) {
+		throw new Error(`Contract proposal failed: ${proposeContractResponse.errors.join(', ')}`);
+	}
 
 	// Extract the liquidity provider fee, the duration the offer is valid for or the available liquidity if no offer was made.
 	const { liquidityProviderFeeInSatoshis, renegotiateAfterTimestamp, availableLiquidityInSatoshis: updatedAvailableLiquidityInSatoshis } = proposeContractResponse;
@@ -141,6 +149,8 @@ const example = async function()
 	{
 		throw(new Error(`Unable to create contract, available liquidity (${updatedAvailableLiquidityInSatoshis}) is insufficient`));
 	}
+
+	//console.log(JSON.stringify(proposeContractResponse, replaceBigInt))
 
 	// NOTE: Regular clients should take note of the renegotiateAfterTimestamp entry and manage their next step so that it happens within the required timeframe.
 
@@ -152,11 +162,8 @@ const example = async function()
 	// Calculate how many satoshis the taker needs to prepare for the contract.
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
-	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
+	//todo const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
 
-	
-	const replaceBigInt = (key, value) =>
-		typeof value === 'bigint' ? value.toString() : value;
 
 	console.log(JSON.stringify(pendingContractData, replaceBigInt))
 	return;
