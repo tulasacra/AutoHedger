@@ -78,7 +78,6 @@ public class AnyHedgeManager
         startInfo.ArgumentList.Add(payoutAddress);
         startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(oracleKey);
-        //startInfo.ArgumentList.Add(TimeSpan.FromDays(durationDays).TotalSeconds.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
         
         var process = new System.Diagnostics.Process

@@ -30,7 +30,7 @@ const CONTRACT_DURATION_IN_SECONDS = BigInt(process.argv[7]);
 const CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER = 0.8;
 const CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER = 10.00;
 
-const taker_payout_address = process.argv[4]; //todo
+const takerPayoutAddress = process.argv[4];
 
 // The contract requires addresses for payout and public keys for validating mutual redemptions.
 // Set these values to compressed WIF keys that you control and the example will use it for the public key and address.
@@ -90,7 +90,7 @@ const example = async function()
 
 	// Collect all the parameters that we need to create a contract
 	const [ startingOracleMessage, startingOracleSignature ] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host);
-	const [ _takerPrivateKey, takerMutualRedeemPublicKey, takerPayoutAddress ] = await parseWIF(TAKER_WIF);
+	const [ _takerPrivateKey, takerMutualRedeemPublicKey, _takerPayoutAddress ] = await parseWIF(TAKER_WIF);
 
 	// Allow mutual redemptions for this contract.
 	const enableMutualRedemption = INTEGER_TRUE;
