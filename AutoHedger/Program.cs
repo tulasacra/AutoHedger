@@ -164,12 +164,22 @@ namespace AutoHedger
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
-                    var suggestedParameters = $"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days";
+
+                    var contractAmountBch = bestContractParameters.Value.amount;
+                    
+                    //todo better fees estimation
+                    const decimal feeMultiplier = 1.05m; //5%
+                    if (contractAmountBch * feeMultiplier > walletBalanceBch)
+                    {
+                        contractAmountBch /= feeMultiplier;
+                    }
+                    
+                    var suggestedParameters = $"Suggested contract parameters: {contractAmountBch} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days";
                     Console.WriteLine(suggestedParameters);
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
                         var contract = await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
-                            bestContractParameters.Value.amount * latestPrice * oracleMetadata.ATTESTATION_SCALING,
+                            contractAmountBch * latestPrice * oracleMetadata.ATTESTATION_SCALING,
                             account.OracleKey,
                             bestContractParameters.Value.premiumDataItem.Item.DurationSeconds);
                         results.Add($"{suggestedParameters}{Environment.NewLine}{contract}");
