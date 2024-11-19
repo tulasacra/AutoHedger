@@ -32,7 +32,7 @@ public class AnyHedgeManager
             {
                 WorkingDirectory = "JavaScript",
                 FileName = "node",
-                Arguments = $"status.mjs {authenticationToken} {accountPrivateKeyWIF} {ToCashAddr(contractAddress)}",
+                Arguments = $"status.mjs {authenticationToken} {accountPrivateKeyWIF} {AddBchPrefix(contractAddress)}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -50,15 +50,7 @@ public class AnyHedgeManager
             throw new Exception(error);
         }
         
-        try
-        {
-            return JsonConvert.DeserializeObject<Contract>(result);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        return JsonConvert.DeserializeObject<Contract>(result);
     }
     
     public async Task<string> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
@@ -96,23 +88,15 @@ public class AnyHedgeManager
             throw new Exception($"{error}{Environment.NewLine}{result}");
         }
         
-        try
+        StringBuilder sb = new();
+        var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string json in jsonObjects)
         {
-            StringBuilder sb = new();
-            var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (string json in jsonObjects)
-            {
-                sb.AppendLine(JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented));
-            }
-            return sb.ToString();
+            sb.AppendLine(JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented));
+        }
+        return sb.ToString();
             
-            //return JsonConvert.DeserializeObject<Contract>(result);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        //return JsonConvert.DeserializeObject<Contract>(result);
     }
 
     private static Dictionary<string, string?> contractsCache = new();
@@ -179,7 +163,7 @@ public class AnyHedgeManager
         BitcoinSecret secret = new BitcoinSecret(accountPrivateKeyWIF, network);
         PubKey pubKey = secret.PubKey;
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
-        string cashAddr = ToCashAddr(legacyAddress.ToString());
+        string cashAddr = AddBchPrefix(legacyAddress.ToString());
 
         //var txIds = await GetTxIds_blockchair(cashAddr);
         var txIds = await GetTxIds_fullstack(legacyAddress.ToString());
@@ -244,16 +228,16 @@ public class AnyHedgeManager
         return result;
     }
 
-    static string ToCashAddr(string legacyAddress)
+    static string AddBchPrefix(string address)
     {
         const string prefix = "bitcoincash:";
-        if (!legacyAddress.StartsWith(prefix))
+        if (!address.StartsWith(prefix))
         {
-            return $"{prefix}{legacyAddress}";
+            return $"{prefix}{address}";
         }
         else
         {
-            return legacyAddress;
+            return address;
         }
     }
 }
