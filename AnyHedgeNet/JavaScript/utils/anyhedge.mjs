@@ -16,7 +16,7 @@ export const calculateRequiredFundingSatoshisPerSide = async function(contractDa
 	// and the value below will be zero, causing no further change.
 	// In the case that the liquidity provider fee is negative, we have to correct the assumption and shift
 	// the liquidity provider fee from the taker to the maker by subtracting from taker and adding to maker.
-	const negativeLiquidityProviderFeeInSatoshis = BigInt(liquidityProviderFeeInSatoshis < 0 ? Math.abs(liquidityProviderFeeInSatoshis) : 0);
+	const negativeLiquidityProviderFeeInSatoshis = liquidityProviderFeeInSatoshis < 0n ? -liquidityProviderFeeInSatoshis : 0n;
 
 	// Add the liquidity provider premium to the paying side, if any.
 	const makerInputSatoshis = makerInputSatoshisBeforeLiquidityFee + negativeLiquidityProviderFeeInSatoshis;
