@@ -74,7 +74,7 @@ export const buildPreFundingTransaction = async function(privateKeyWIF, unspentT
 	// Negative change satoshis indicates the LP doesn't have enough funds - which is an internal error
 	if(changeSatoshis < 0)
 	{
-		throw(new Error(`The provided taker private key/address (${address}) does not have enough funds ${requiredSatoshis} to enter this position.`));
+		throw(new Error(`The provided taker private key/address (${address}) with balance ${totalSatoshis} does not have enough funds ${requiredSatoshis} to enter this position.`));
 	}
 
 	// Add a change output to the transaction if there is enough left

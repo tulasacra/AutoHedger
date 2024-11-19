@@ -140,6 +140,7 @@ const example = async function()
 	if (proposeContractResponse.errors) {
 		throw new Error(`Contract proposal failed: ${proposeContractResponse.errors.join(', ')}`);
 	}
+	console.log(JSON.stringify(proposeContractResponse, replaceBigInt))
 
 	// Extract the liquidity provider fee, the duration the offer is valid for or the available liquidity if no offer was made.
 	const { liquidityProviderFeeInSatoshis, renegotiateAfterTimestamp, availableLiquidityInSatoshis: updatedAvailableLiquidityInSatoshis } = proposeContractResponse;
@@ -150,30 +151,31 @@ const example = async function()
 		throw(new Error(`Unable to create contract, available liquidity (${updatedAvailableLiquidityInSatoshis}) is insufficient`));
 	}
 
-	//console.log(JSON.stringify(proposeContractResponse, replaceBigInt))
-
 	// NOTE: Regular clients should take note of the renegotiateAfterTimestamp entry and manage their next step so that it happens within the required timeframe.
 
 	// Retrieve contract data from the settlement service to get the final contract information.
 	// NOTE: This step is necessary because the settlement service adds a fee that needs to be taken into consideration when funding the contract.
 	const { address } = await anyHedgeManager.createContract(contractCreationParameters);
 	const pendingContractData = await anyHedgeManager.getContractStatus(address, TAKER_WIF);
+	console.log(JSON.stringify(pendingContractData, replaceBigInt))
 
 	// Calculate how many satoshis the taker needs to prepare for the contract.
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
-	//todo const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
-
-
-	console.log(JSON.stringify(pendingContractData, replaceBigInt))
-	return;
-
+	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
+	console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
+	
 	// Fetch all available UTXOs.
 	// NOTE: This will result in automatic consolidation of UTXOs and regular clients should implement their own coin selection strategies.
 	const unspentTransactionOutputs = await fetchUnspentTransactionOutputs(takerPayoutAddress);
-
+	console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
+	
 	// Create a dependency transaction used to manufacture a UTXO of the correct amount
 	const dependencyTransaction = await buildPreFundingTransaction(TAKER_WIF, unspentTransactionOutputs, takerInputSatoshis);
+	console.log(JSON.stringify(dependencyTransaction, replaceBigInt))
+
+	return;
+	
 
 	// Hash the dependency transaction.
 	const dependencyTransactionHash = hashTransaction(hexToBin(dependencyTransaction));

@@ -93,7 +93,7 @@ public class AnyHedgeManager
 
         if (process.ExitCode != 0)
         {
-            throw new Exception(error);
+            throw new Exception($"{error}{Environment.NewLine}{result}");
         }
         
         try
