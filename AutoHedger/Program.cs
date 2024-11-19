@@ -12,8 +12,6 @@ namespace AutoHedger
         private static Timer timer;
         const int Minutes = 15;
 
-        private static readonly Spinner spinner = new Spinner();
-
         private const string delimiter = "-------------------------------------------------------------------------------------";
         private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
         private static AnyHedgeManager AnyHedge;
@@ -46,11 +44,11 @@ namespace AutoHedger
 
         private static async Task DisplayData(CurrencyConfig[] accounts)
         {
-            spinner.Stop();
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
 
+            var contractProposals = new List<string>();
             try
             {
                 Console.Write("Reading contracts ..");
@@ -66,7 +64,7 @@ namespace AutoHedger
                 foreach (var account in accounts)
                 {
                     Console.WriteLine(delimiterBold);
-                    await DisplayData(account, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList());
+                    contractProposals.AddRange(await DisplayData(account, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList()));
                 }
             }
             catch (Exception ex)
@@ -74,13 +72,31 @@ namespace AutoHedger
                 Widgets.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex}", ConsoleColor.Red);
             }
 
+            const string showContractProposal = "Show contract proposal";
+            Menu.RemoveOptions(x => x.Value.Description.StartsWith(showContractProposal));
+            for (int i = 0; i < contractProposals.Count; i++)
+            {
+                var proposal = contractProposals[i];
+                Menu.AddOption((ConsoleKey)((int)ConsoleKey.D1 + i), $"{showContractProposal} {i+1}", () =>
+                {
+                    DisplayContractProposal(proposal);
+                });
+            }
+
             Console.WriteLine(delimiterBold);
             Menu.Show();
-            //spinner.Start(); prevents scrolling :(
         }
 
-        private static async Task DisplayData(CurrencyConfig account, List<Contract> contracts, List<PremiumDataItem> premiumData)
+        private static void DisplayContractProposal(string proposal)
         {
+            Console.Clear();
+            Console.WriteLine(proposal);
+            Menu.Show();
+        }
+
+        private static async Task<List<string>> DisplayData(CurrencyConfig account, List<Contract> contracts, List<PremiumDataItem> premiumData)
+        {
+            var results = new List<string>();
             var oracleKey = account.OracleKey;
             OracleMetadata? oracleMetadata = account.OracleMetadata;
             decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
@@ -148,16 +164,20 @@ namespace AutoHedger
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
-                    Console.WriteLine($"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days");
+                    var suggestedParameters = $"Suggested contract parameters: {bestContractParameters.Value.amount} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days";
+                    Console.WriteLine(suggestedParameters);
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
-                        // await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
-                        //     bestContractParameters.Value.amount * latestPrice * oracleMetadata.ATTESTATION_SCALING,
-                        //     account.OracleKey,
-                        //     bestContractParameters.Value.premiumDataItem.DurationSeconds);
+                        var contract = await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
+                            bestContractParameters.Value.amount * latestPrice * oracleMetadata.ATTESTATION_SCALING,
+                            account.OracleKey,
+                            bestContractParameters.Value.premiumDataItem.Item.DurationSeconds);
+                        results.Add($"{suggestedParameters}{Environment.NewLine}{contract}");
                     }
                 }
             }
+
+            return results;
         }
 
         internal class PremiumDataItemPlus

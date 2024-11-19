@@ -127,11 +127,23 @@ public class Menu
         menuOptions[key] = (description, action);
     }
 
+    public void RemoveOptions(Func<KeyValuePair<ConsoleKey, (string Description, Action Action)>, bool> predicate)
+    {
+        var keysToRemove = menuOptions.Where(predicate).Select(x => x.Key).ToList();
+        foreach (var key in keysToRemove)
+        {
+            menuOptions.Remove(key);
+        }
+    }
+
     public void Show()
     {
         foreach (var option in menuOptions)
         {
-            Console.WriteLine($"[{option.Key}] {option.Value.Description}");
+            var keyDisplay = option.Key >= ConsoleKey.D0 && option.Key <= ConsoleKey.D9 
+                ? ((int)option.Key - (int)ConsoleKey.D0).ToString() 
+                : option.Key.ToString();
+            Console.WriteLine($"[{keyDisplay}] {option.Value.Description}");
         }
 
         Console.WriteLine($"[{exitOptionKey}] {exitOptionDescription}");

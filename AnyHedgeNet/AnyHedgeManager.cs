@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -60,7 +61,7 @@ public class AnyHedgeManager
         }
     }
     
-    public async Task<Contract> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
+    public async Task<string> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
     {
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
@@ -97,7 +98,15 @@ public class AnyHedgeManager
         
         try
         {
-            return JsonConvert.DeserializeObject<Contract>(result);
+            StringBuilder sb = new();
+            var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string json in jsonObjects)
+            {
+                sb.AppendLine(JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented));
+            }
+            return sb.ToString();
+            
+            //return JsonConvert.DeserializeObject<Contract>(result);
         }
         catch (Exception e)
         {
