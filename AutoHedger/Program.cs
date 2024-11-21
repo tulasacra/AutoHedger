@@ -178,7 +178,7 @@ namespace AutoHedger
                     Console.WriteLine(suggestedParameters);
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
-                        var contract = await AnyHedge.CreateContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
+                        var contract = await AnyHedge.ProposeContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
                             contractAmountBch * latestPrice * oracleMetadata.ATTESTATION_SCALING,
                             account.OracleKey,
                             bestContractParameters.Value.premiumDataItem.Item.DurationSeconds);

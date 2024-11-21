@@ -63,7 +63,7 @@ public class AnyHedgeManager
         return JsonConvert.DeserializeObject<Contract>(result);
     }
 
-    public async Task<string> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
+    public async Task<Contract> ProposeContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
     {
         durationSeconds -= 120; //to prevent client/server time diff errors (expected contract duration to be in the range [7200, 7776000] but got 7776052)
 
@@ -90,10 +90,10 @@ public class AnyHedgeManager
         process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
         process.Start();
         process.BeginOutputReadLine();
-        
+
         await process.StandardInput.WriteLineAsync(accountPrivateKeyWIF);
         process.StandardInput.Close();
-        
+
         try
         {
             await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
@@ -112,6 +112,68 @@ public class AnyHedgeManager
             throw new Exception($"{error}{Environment.NewLine}{result}");
         }
 
+        // useful for debug
+        // StringBuilder sb = new();
+        // var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        // foreach (string json in jsonObjects)
+        // {
+        //     sb.AppendLine(JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented));
+        // }
+        //return sb.ToString();
+
+        return JsonConvert.DeserializeObject<Contract>(result);
+    }
+
+    public async Task<string> FundContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds, Contract contract)
+    {
+        durationSeconds -= 120; //to prevent client/server time diff errors (expected contract duration to be in the range [7200, 7776000] but got 7776052)
+
+        var startInfo = new ProcessStartInfo
+        {
+            WorkingDirectory = "JavaScript",
+            FileName = "node",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("liquidity-provider.mjs");
+        startInfo.ArgumentList.Add(authenticationToken);
+        startInfo.ArgumentList.Add(payoutAddress);
+        startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(oracleKey);
+        startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
+
+        var process = new Process();
+        process.StartInfo = startInfo;
+        StringBuilder resultBuilder = new();
+        process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
+        process.Start();
+        process.BeginOutputReadLine();
+
+        await process.StandardInput.WriteLineAsync(accountPrivateKeyWIF);
+        process.StandardInput.Close();
+
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException)
+        {
+            process.Kill();
+            throw new TimeoutException("Process execution timed out.");
+        }
+
+        var result = resultBuilder.ToString();
+        var error = await process.StandardError.ReadToEndAsync();
+
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"{error}{Environment.NewLine}{result}");
+        }
+
+        // useful for debug
         StringBuilder sb = new();
         var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (string json in jsonObjects)
@@ -123,6 +185,7 @@ public class AnyHedgeManager
 
         //return JsonConvert.DeserializeObject<Contract>(result);
     }
+
 
     private static Dictionary<string, string?> contractsCache = new();
 

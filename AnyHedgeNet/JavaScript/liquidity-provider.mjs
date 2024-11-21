@@ -60,14 +60,13 @@ const AUTHENTICATION_TOKEN = process.argv[2];
 const INTEGER_TRUE = BigInt('1');
 
 // Wrap the example code in an async function to allow async/await.
-const example = async function(TAKER_WIF)
-{
+const ProposeContract = async function(TAKER_BB_WIF) {
 	// Get service information from the liquidity provider.
 	const liquidityServiceInformationUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/liquidityServiceInformation`;
 	const liquidityServiceInformationResponse = await fetchJSONGetRequest(liquidityServiceInformationUrl);
 
 	// Extract the settlement service, oracle relay and liquidity parameters.
-	const { settlementService, oracleRelay, liquidityParameters } = liquidityServiceInformationResponse;
+	const {settlementService, oracleRelay, liquidityParameters} = liquidityServiceInformationResponse;
 
 	// NOTE: Regular clients should validate that user provided input fit within the liquidity service constraints in the liquidityParameters.
 
@@ -77,73 +76,73 @@ const example = async function(TAKER_WIF)
 	// Define url and arguments needed to prepare a contract position, which will give us necessary details about the liquidity providers side of the contract.
 	const prepareContractPositionUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/prepareContractPosition`;
 	const prepareContractPositionArguments =
-	{
-		oraclePublicKey: ORACLE_PUBLIC_KEY,
-		poolSide: MAKER_SIDE,
-	};
+		{
+			oraclePublicKey: ORACLE_PUBLIC_KEY,
+			poolSide: MAKER_SIDE,
+		};
 
 	// Fetch liquidity provider information required in order to make a new contract position.
 	const prepareContractPositionResponse = await fetchJSONPostRequest(prepareContractPositionUrl, prepareContractPositionArguments);
 
 	// Extract the liquidity providers public key, payout address and available satoshis.
-	const { liquidityProvidersMutualRedemptionPublicKey, liquidityProvidersPayoutAddress, availableLiquidityInSatoshis } = prepareContractPositionResponse;
+	const {liquidityProvidersMutualRedemptionPublicKey, liquidityProvidersPayoutAddress, availableLiquidityInSatoshis} = prepareContractPositionResponse;
 
 	// Collect all the parameters that we need to create a contract
-	const [ startingOracleMessage, startingOracleSignature ] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host);
-	const [ _takerPrivateKey, takerMutualRedeemPublicKey, _takerPayoutAddress ] = await parseWIF(TAKER_WIF);
+	const [startingOracleMessage, startingOracleSignature] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host);
+	const [_takerPrivateKey, takerMutualRedeemPublicKey, _takerPayoutAddress] = await parseWIF(TAKER_BB_WIF);
 
 	// Allow mutual redemptions for this contract.
 	const enableMutualRedemption = INTEGER_TRUE;
 
 	// Determine the short mutual redemption public key and payout address.
 	const shortMutualRedeemPublicKey = (TAKER_SIDE === 'short' ? takerMutualRedeemPublicKey : liquidityProvidersMutualRedemptionPublicKey);
-	const shortPayoutAddress         = (TAKER_SIDE === 'short' ? takerPayoutAddress : liquidityProvidersPayoutAddress);
+	const shortPayoutAddress = (TAKER_SIDE === 'short' ? takerPayoutAddress : liquidityProvidersPayoutAddress);
 
 	// Determine the long mutual redemption public key and payout address.
 	const longMutualRedeemPublicKey = (TAKER_SIDE === 'long' ? takerMutualRedeemPublicKey : liquidityProvidersMutualRedemptionPublicKey);
-	const longPayoutAddress         = (TAKER_SIDE === 'long' ? takerPayoutAddress : liquidityProvidersPayoutAddress);
+	const longPayoutAddress = (TAKER_SIDE === 'long' ? takerPayoutAddress : liquidityProvidersPayoutAddress);
 
 	// Calculate the maturity timestamp based on the contract duration.
 	const maturityTimestamp = BigInt(Math.ceil((Date.now() / 1000))) + CONTRACT_DURATION_IN_SECONDS;
 
 	// Gather all contract creation parameters.
 	const contractCreationParameters =
-	{
-		takerSide: TAKER_SIDE,
-		makerSide: MAKER_SIDE,
-		oraclePublicKey: ORACLE_PUBLIC_KEY,
-		shortMutualRedeemPublicKey,
-		longMutualRedeemPublicKey,
-		shortPayoutAddress,
-		longPayoutAddress,
-		enableMutualRedemption,
-		nominalUnits: NOMINAL_UNITS,
-		startingOracleMessage,
-		startingOracleSignature,
-		maturityTimestamp,
-		isSimpleHedge: INTEGER_TRUE,
-		highLiquidationPriceMultiplier: CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER,
-		lowLiquidationPriceMultiplier: CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER,
-	};
+		{
+			takerSide: TAKER_SIDE,
+			makerSide: MAKER_SIDE,
+			oraclePublicKey: ORACLE_PUBLIC_KEY,
+			shortMutualRedeemPublicKey,
+			longMutualRedeemPublicKey,
+			shortPayoutAddress,
+			longPayoutAddress,
+			enableMutualRedemption,
+			nominalUnits: NOMINAL_UNITS,
+			startingOracleMessage,
+			startingOracleSignature,
+			maturityTimestamp,
+			isSimpleHedge: INTEGER_TRUE,
+			highLiquidationPriceMultiplier: CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER,
+			lowLiquidationPriceMultiplier: CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER,
+		};
 
 	// Define url and package the arguments needed to propose a contract position.
 	const proposeContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/proposeContract`;
-	const proposeContractArguments = { contractCreationParameters };
+	const proposeContractArguments = {contractCreationParameters};
 
 	const replaceBigInt = (key, value) =>
 		typeof value === 'bigint' ? value.toString() : value;
 
-	console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
+	//console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
 
 	// Send the contract proposal to the liquidity provider.
 	const proposeContractResponse = await fetchJSONPostRequest(proposeContractUrl, proposeContractArguments);
 	if (proposeContractResponse.errors) {
 		throw new Error(`Contract proposal failed: ${proposeContractResponse.errors.join(', ')}`);
 	}
-	console.log(JSON.stringify(proposeContractResponse, replaceBigInt))
+	//console.log(JSON.stringify(proposeContractResponse, replaceBigInt))
 
 	// Extract the liquidity provider fee, the duration the offer is valid for or the available liquidity if no offer was made.
-	const { liquidityProviderFeeInSatoshis, renegotiateAfterTimestamp, availableLiquidityInSatoshis: updatedAvailableLiquidityInSatoshis } = proposeContractResponse;
+	const {liquidityProviderFeeInSatoshis, renegotiateAfterTimestamp, availableLiquidityInSatoshis: updatedAvailableLiquidityInSatoshis} = proposeContractResponse;
 
 	// Throw an error if the liquidity provider does not have sufficient liquidity available for the contract.
 	if(typeof updatedAvailableLiquidityInSatoshis !== 'undefined')
@@ -155,20 +154,25 @@ const example = async function(TAKER_WIF)
 
 	// Retrieve contract data from the settlement service to get the final contract information.
 	// NOTE: This step is necessary because the settlement service adds a fee that needs to be taken into consideration when funding the contract.
-	const { address } = await anyHedgeManager.createContract(contractCreationParameters);
-	const pendingContractData = await anyHedgeManager.getContractStatus(address, TAKER_WIF);
+	const {address} = await anyHedgeManager.createContract(contractCreationParameters);
+	const pendingContractData = await anyHedgeManager.getContractStatus(address, TAKER_BB_WIF);
 	console.log(JSON.stringify(pendingContractData, replaceBigInt))
+
+	return;
+}
+const FundContract = async function(TAKER_WIF)
+{	
 
 	// Calculate how many satoshis the taker needs to prepare for the contract.
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
 	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
-	console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
+	//console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
 	
 	// Fetch all available UTXOs.
 	// NOTE: This will result in automatic consolidation of UTXOs and regular clients should implement their own coin selection strategies.
 	const unspentTransactionOutputs = await fetchUnspentTransactionOutputs(takerPayoutAddress);
-	console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
+	//console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
 	
 	// Create a dependency transaction used to manufacture a UTXO of the correct amount
 	const dependencyTransaction = await buildPreFundingTransaction(TAKER_WIF, unspentTransactionOutputs, takerInputSatoshis);
@@ -215,6 +219,6 @@ const example = async function(TAKER_WIF)
 };
 
 process.stdin.on('data', function(data) {
-    const TAKER_WIF = data.toString().trim();
-    example(TAKER_WIF);
+    const TAKER_BB_WIF = data.toString().trim();
+    ProposeContract(TAKER_BB_WIF);
 });
