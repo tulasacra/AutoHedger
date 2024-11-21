@@ -27,9 +27,9 @@ public class AnyHedgeManager
 
     public async Task<Contract> GetContract(string contractAddress)
     {
-        var process = new System.Diagnostics.Process
+        var process = new Process
         {
-            StartInfo = new System.Diagnostics.ProcessStartInfo
+            StartInfo = new ProcessStartInfo
             {
                 WorkingDirectory = "JavaScript",
                 FileName = "node",
@@ -67,10 +67,11 @@ public class AnyHedgeManager
     {
         durationSeconds -= 120; //to prevent client/server time diff errors (expected contract duration to be in the range [7200, 7776000] but got 7776052)
 
-        var startInfo = new System.Diagnostics.ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             WorkingDirectory = "JavaScript",
             FileName = "node",
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -78,7 +79,6 @@ public class AnyHedgeManager
         };
         startInfo.ArgumentList.Add("liquidity-provider.mjs");
         startInfo.ArgumentList.Add(authenticationToken);
-        startInfo.ArgumentList.Add(accountPrivateKeyWIF);
         startInfo.ArgumentList.Add(payoutAddress);
         startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(oracleKey);
@@ -90,6 +90,9 @@ public class AnyHedgeManager
         process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
         process.Start();
         process.BeginOutputReadLine();
+        
+        await process.StandardInput.WriteLineAsync(accountPrivateKeyWIF);
+        process.StandardInput.Close();
         
         try
         {

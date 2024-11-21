@@ -12,16 +12,16 @@ import { calculateRequiredFundingSatoshisPerSide } from './utils/anyhedge.mjs';
 import { fetchJSONGetRequest, fetchJSONPostRequest, fetchCurrentOracleMessageAndSignature, fetchUnspentTransactionOutputs } from './utils/network.mjs';
 
 // Set how many US cents that Short would like to protect against price volatility.
-const NOMINAL_UNITS = parseFloat(process.argv[5]);
+const NOMINAL_UNITS = parseFloat(process.argv[4]);
 
 // Set the oracle public key to one that you know is operational and available. This is the production USD price oracle.
-const ORACLE_PUBLIC_KEY = process.argv[6];
+const ORACLE_PUBLIC_KEY = process.argv[5];
 
 // Set the contract duration in seconds, after which the contract is matured.
 // NOTE: 10800 = 3 hours * 60 minutes * 60 seconds.
 // NOTE: Liquidity provider requires contracts to be at least a two hours long, and
 //       won't settle contract early when they are less than two hours from maturity.
-const CONTRACT_DURATION_IN_SECONDS = BigInt(process.argv[7]);
+const CONTRACT_DURATION_IN_SECONDS = BigInt(process.argv[6]);
 
 // Set the multipliers for how much the price can change before the contract is liquidated.
 // For example assuming the price today is $300 then:
@@ -30,7 +30,7 @@ const CONTRACT_DURATION_IN_SECONDS = BigInt(process.argv[7]);
 const CONTRACT_LOW_LIQUIDATION_PRICE_MULTIPLIER = 0.8;
 const CONTRACT_HIGH_LIQUIDATION_PRICE_MULTIPLIER = 10.00;
 
-const takerPayoutAddress = process.argv[4];
+const takerPayoutAddress = process.argv[3];
 
 // The contract requires addresses for payout and public keys for validating mutual redemptions.
 // Set these values to compressed WIF keys that you control and the example will use it for the public key and address.
@@ -40,7 +40,7 @@ const takerPayoutAddress = process.argv[4];
 //   2. Choose any address and take note of it so you can watch later for the automatic redemption to appear.
 //   2. Right click the address --> Private Key
 //   3. Copy the private key in the top box.
-const TAKER_WIF = process.argv[3];
+//const TAKER_WIF = process.argv[3];
 const TAKER_SIDE = 'short';
 const MAKER_SIDE = (TAKER_SIDE === 'short' ? 'long' : 'short');
 
@@ -60,7 +60,7 @@ const AUTHENTICATION_TOKEN = process.argv[2];
 const INTEGER_TRUE = BigInt('1');
 
 // Wrap the example code in an async function to allow async/await.
-const example = async function()
+const example = async function(TAKER_WIF)
 {
 	// Get service information from the liquidity provider.
 	const liquidityServiceInformationUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/liquidityServiceInformation`;
@@ -214,5 +214,7 @@ const example = async function()
 	console.log(`Funded contract '${pendingContractData.address}' in transaction '${fundingTransactionHash}'.`);
 };
 
-// Run the example code.
-example();
+process.stdin.on('data', function(data) {
+    const TAKER_WIF = data.toString().trim();
+    example(TAKER_WIF);
+});
