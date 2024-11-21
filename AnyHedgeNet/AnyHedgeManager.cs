@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using NBitcoin;
@@ -75,7 +76,6 @@ public class AnyHedgeManager
             UseShellExecute = false,
             CreateNoWindow = true
         };
-
         startInfo.ArgumentList.Add("liquidity-provider.mjs");
         startInfo.ArgumentList.Add(authenticationToken);
         startInfo.ArgumentList.Add(accountPrivateKeyWIF);
@@ -84,12 +84,13 @@ public class AnyHedgeManager
         startInfo.ArgumentList.Add(oracleKey);
         startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
 
-        var process = new System.Diagnostics.Process
-        {
-            StartInfo = startInfo
-        };
-
+        var process = new Process();
+        process.StartInfo = startInfo;
+        StringBuilder resultBuilder = new();
+        process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
         process.Start();
+        process.BeginOutputReadLine();
+        
         try
         {
             await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
@@ -100,8 +101,8 @@ public class AnyHedgeManager
             throw new TimeoutException("Process execution timed out.");
         }
 
-        var result = await process.StandardOutput.ReadToEndAsync();
-        string error = await process.StandardError.ReadToEndAsync();
+        var result = resultBuilder.ToString();
+        var error = await process.StandardError.ReadToEndAsync();
 
         if (process.ExitCode != 0)
         {
