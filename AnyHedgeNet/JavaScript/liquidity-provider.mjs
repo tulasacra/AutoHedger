@@ -133,7 +133,7 @@ const example = async function()
 	const replaceBigInt = (key, value) =>
 		typeof value === 'bigint' ? value.toString() : value;
 
-	//console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
+	console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
 
 	// Send the contract proposal to the liquidity provider.
 	const proposeContractResponse = await fetchJSONPostRequest(proposeContractUrl, proposeContractArguments);

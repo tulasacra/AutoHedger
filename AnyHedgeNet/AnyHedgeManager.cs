@@ -41,18 +41,27 @@ public class AnyHedgeManager
         };
 
         process.Start();
-        await process.WaitForExitAsync();
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException)
+        {
+            process.Kill();
+            throw new TimeoutException("Process execution timed out.");
+        }
+
         string result = await process.StandardOutput.ReadToEndAsync();
         string error = await process.StandardError.ReadToEndAsync();
 
         if (process.ExitCode != 0)
         {
-            throw new Exception(error);
+            throw new Exception($"{error}{Environment.NewLine}{result}");
         }
-        
+
         return JsonConvert.DeserializeObject<Contract>(result);
     }
-    
+
     public async Task<string> CreateContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds)
     {
         var startInfo = new System.Diagnostics.ProcessStartInfo
@@ -64,7 +73,7 @@ public class AnyHedgeManager
             UseShellExecute = false,
             CreateNoWindow = true
         };
-        
+
         startInfo.ArgumentList.Add("liquidity-provider.mjs");
         startInfo.ArgumentList.Add(authenticationToken);
         startInfo.ArgumentList.Add(accountPrivateKeyWIF);
@@ -72,30 +81,40 @@ public class AnyHedgeManager
         startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(oracleKey);
         startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
-        
+
         var process = new System.Diagnostics.Process
         {
             StartInfo = startInfo
         };
 
         process.Start();
-        await process.WaitForExitAsync();
-        string result = await process.StandardOutput.ReadToEndAsync();
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException)
+        {
+            process.Kill();
+            throw new TimeoutException("Process execution timed out.");
+        }
+
+        var result = await process.StandardOutput.ReadToEndAsync();
         string error = await process.StandardError.ReadToEndAsync();
 
         if (process.ExitCode != 0)
         {
             throw new Exception($"{error}{Environment.NewLine}{result}");
         }
-        
+
         StringBuilder sb = new();
         var jsonObjects = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (string json in jsonObjects)
         {
             sb.AppendLine(JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented));
         }
+
         return sb.ToString();
-            
+
         //return JsonConvert.DeserializeObject<Contract>(result);
     }
 
@@ -122,11 +141,11 @@ public class AnyHedgeManager
                 // only outgoing transactions are contract funding candidates
                 return tx["balance_change"].ToString().StartsWith('-') && !contractsCache.ContainsKey(txid);
             })
-            .Select(tx=> tx["hash"].ToString());
+            .Select(tx => tx["hash"].ToString());
 
         return txIds;
     }
-    
+
     private async Task<IEnumerable<string>> GetTxIds_fullstack(string legacyAddress)
     {
         using HttpClient client = new HttpClient();
@@ -146,11 +165,11 @@ public class AnyHedgeManager
                 string txid = tx["tx_hash"].ToString();
                 return !contractsCache.ContainsKey(txid);
             })
-            .Select(tx=> tx["tx_hash"].ToString());
+            .Select(tx => tx["tx_hash"].ToString());
 
         return txIds;
     }
-    
+
 
     public async Task<List<string>> GetContractAddresses()
     {
@@ -158,7 +177,7 @@ public class AnyHedgeManager
         {
             return new List<string>(0);
         }
-        
+
         Network network = Network.Main;
         BitcoinSecret secret = new BitcoinSecret(accountPrivateKeyWIF, network);
         PubKey pubKey = secret.PubKey;
@@ -182,7 +201,7 @@ public class AnyHedgeManager
                 {
                     throw new Exception($"Error fetching transactions: {txResponse.ReasonPhrase}");
                 }
-                
+
                 string txJsonResult = await txResponse.Content.ReadAsStringAsync();
                 JObject txJson = JObject.Parse(txJsonResult);
 
@@ -207,7 +226,7 @@ public class AnyHedgeManager
 
                     results.Add((txid, contractId));
                 }
-                
+
                 return results;
             }));
         }
