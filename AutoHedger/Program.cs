@@ -8,7 +8,6 @@ using Timer = System.Timers.Timer;
 
 //todo
 /*
- * dont show wallet.contract balance if nothing to show
  * reset refresh timer after manual reset
  * show longs in main
  * extract get wallet balances from display data
@@ -151,7 +150,7 @@ namespace AutoHedger
             var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
             Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} (Δ {priceDelta.Format(2, 0, true)} %)");
 
-            if (account.Wallet.HasAddress || !string.IsNullOrEmpty(AppSettings.AccountKey))
+            if (walletBalanceBch != null || contractsBalanceBch != 0)
             {
                 Console.WriteLine(delimiter);
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
