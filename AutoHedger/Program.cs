@@ -5,6 +5,22 @@ using ConsoleWidgets;
 using OraclesCash;
 using Timer = System.Timers.Timer;
 
+
+//todo
+/*
+ * dont show wallet.contract balance if nothing to show
+ * reset refresh timer after manual reset
+ * show longs in main
+ * extract get wallet balances from display data
+ * extract get proposals from display data
+ * move the fees subtraction to the ah.dll
+ * improve fee estimate by looking at current settlement fees
+ * pass the contract data from propose to fund methods
+ * type YES to move from propose to fund
+ * check yield and latest price diffs between main and propose
+ * check what happens if new deposits are made in the payout address instead of new contract 
+ */
+
 namespace AutoHedger
 {
     class Program
