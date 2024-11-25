@@ -39,7 +39,7 @@ namespace AutoHedger
             AnyHedge = new AnyHedgeManager(AppSettings.AccountKey);
 
             Console.Write("Reading OracleMetadata ..");
-            CurrencyConfig[] accounts = await CurrencyConfig.Get(AppSettings.Wallets);
+            TermedDepositAccount[] accounts = await TermedDepositAccount.Get(AppSettings.Wallets);
 
             async void Refresh()
             {
@@ -57,7 +57,7 @@ namespace AutoHedger
             await Menu.Start();
         }
 
-        private static async Task DisplayData(CurrencyConfig[] accounts)
+        private static async Task DisplayData(TermedDepositAccount[] accounts)
         {
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
@@ -74,6 +74,10 @@ namespace AutoHedger
                 Console.Write("Reading premiums ..");
                 const string counterLeverage = "5"; //only check 20% hedge
                 var premiumData = (await Premiums.GetPremiums(counterLeverage, 0)).ToList();
+                Console.WriteLine("OK");
+
+                Console.Write("Reading latest prices ..");
+                await TermedDepositAccount.UpdateLatestPrice(accounts);
                 Console.WriteLine("OK");
 
                 foreach (var account in accounts)
@@ -109,12 +113,11 @@ namespace AutoHedger
             Menu.Show();
         }
 
-        private static async Task<List<string>> DisplayData(CurrencyConfig account, List<Contract> contracts, List<PremiumDataItem> premiumData)
+        private static async Task<List<string>> DisplayData(TermedDepositAccount account, List<Contract> contracts, List<PremiumDataItem> premiumData)
         {
             var results = new List<string>();
             var oracleKey = account.OracleKey;
             OracleMetadata? oracleMetadata = account.OracleMetadata;
-            decimal latestPrice = await OraclesCashService.GetLatestPrice(oracleKey, oracleMetadata);
 
             decimal? walletBalanceBch = null;
             decimal? walletBalance = null;
@@ -124,7 +127,7 @@ namespace AutoHedger
                 {
                     var bchClient = new BitcoinCashClient();
                     walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
-                    walletBalance = walletBalanceBch.Value * latestPrice;
+                    walletBalance = walletBalanceBch.Value * account.LatestPrice;
                 }
             }
             catch (Exception ex)
@@ -143,12 +146,12 @@ namespace AutoHedger
                 .Where(x => x.Parameters.OraclePublicKey == oracleKey)
                 .Where(x => x.Fundings[0].Settlement != null).ToList();
             contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
-            contractsBalanceBch = contractsBalance / latestPrice;
+            contractsBalanceBch = contractsBalance / account.LatestPrice;
             bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
 
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
-            var priceDelta = (latestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
-            Console.WriteLine($"Latest price from OraclesCash: {latestPrice,20:N8} {account.Wallet.Currency} (Δ {priceDelta.Format(2, 0, true)} %)");
+            var priceDelta = (account.LatestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
+            Console.WriteLine($"Latest price from OraclesCash: {account.LatestPrice,20:N8} {account.Wallet.Currency} (Δ {priceDelta.Format(2, 0, true)} %)");
 
             if (walletBalanceBch != null || contractsBalanceBch != 0)
             {
@@ -196,7 +199,7 @@ namespace AutoHedger
                     if (!string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
                         var contract = await AnyHedge.ProposeContract(account.Wallet.Address, account.Wallet.PrivateKeyWIF,
-                            contractAmountBch * latestPrice * oracleMetadata.ATTESTATION_SCALING,
+                            contractAmountBch * account.LatestPrice * oracleMetadata.ATTESTATION_SCALING,
                             account.OracleKey,
                             bestContractParameters.Value.premiumDataItem.Item.DurationSeconds);
                         results.Add($"{suggestedParameters}{Environment.NewLine}{contract}");

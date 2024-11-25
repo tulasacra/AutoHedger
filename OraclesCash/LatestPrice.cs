@@ -44,6 +44,12 @@ public static partial class OraclesCashService
 
         return (decimal)price / scaling;
     }
+
+    public static async Task<decimal[]> GetLatestPrice((string OracleKey, OracleMetadata OracleMetadata)[] o)
+    {
+        var tasks = o.Select(oracle => GetLatestPrice(oracle.OracleKey, oracle.OracleMetadata));
+        return await Task.WhenAll(tasks);
+    }
 }
 
 class OracleMessagesResponse
