@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using AnyHedgeNet;
-using BitcoinCash;
 using ConsoleWidgets;
 using OraclesCash;
 using Timer = System.Timers.Timer;
@@ -10,7 +9,6 @@ using Timer = System.Timers.Timer;
 /*
  * reset refresh timer after manual reset
  * show longs in main
- * extract get wallet balances from display data
  * extract get proposals from display data
  * move the fees subtraction to the ah.dll
  * improve fee estimate by looking at current settlement fees
@@ -77,8 +75,19 @@ namespace AutoHedger
                 Console.WriteLine("OK");
 
                 Console.Write("Reading latest prices ..");
-                await TermedDepositAccount.UpdateLatestPrice(accounts);
+                await TermedDepositAccount.UpdateLatestPrices(accounts);
                 Console.WriteLine("OK");
+                
+                Console.Write("Reading wallet balances ..");
+                try
+                {
+                    TermedDepositAccount.UpdateWalletBalances(accounts);
+                    Console.WriteLine("OK");
+                }
+                catch (Exception ex)
+                {
+                    Widgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
+                }
 
                 foreach (var account in accounts)
                 {
@@ -119,21 +128,9 @@ namespace AutoHedger
             var oracleKey = account.OracleKey;
             OracleMetadata? oracleMetadata = account.OracleMetadata;
 
-            decimal? walletBalanceBch = null;
-            decimal? walletBalance = null;
-            try
-            {
-                if (account.Wallet.HasAddress)
-                {
-                    var bchClient = new BitcoinCashClient();
-                    walletBalanceBch = (decimal)bchClient.GetWalletBalances(new List<string>() { account.Wallet.Address }).First().Value / 100_000_000;
-                    walletBalance = walletBalanceBch.Value * account.LatestPrice;
-                }
-            }
-            catch (Exception ex)
-            {
-                Widgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
-            }
+            decimal? walletBalanceBch = account.WalletBalanceBch;
+            decimal? walletBalance = account.WalletBalance;
+
 
             decimal? contractsBalanceBch = null;
             decimal? contractsBalance = null;
