@@ -189,6 +189,8 @@ namespace AutoHedger
                     {
                         contractAmountBch /= feeMultiplier;
                     }
+
+                    contractAmountBch = Math.Round(contractAmountBch, 8);
                     
                     var suggestedParameters = $"Suggested contract parameters: {contractAmountBch} BCH, {bestContractParameters.Value.premiumDataItem.Item.DurationDays} days";
                     Console.WriteLine(suggestedParameters);
