@@ -12,7 +12,6 @@ using Timer = System.Timers.Timer;
  * move the fees subtraction to the ah.dll
  * improve fee estimate by looking at current settlement fees
  * pass the contract data from propose to fund methods
- * type YES to move from propose to fund
  * check yield and latest price diffs between main and propose
  * check what happens if new deposits are made in the payout address instead of new contract 
  */
@@ -28,6 +27,7 @@ namespace AutoHedger
         private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
         private static AnyHedgeManager AnyHedge;
         private static Menu Menu = new();
+        private static TermedDepositAccount[] accounts;
 
 
         static async Task Main(string[] args)
@@ -36,11 +36,11 @@ namespace AutoHedger
             AnyHedge = new AnyHedgeManager(AppSettings.AccountKey);
 
             Console.Write("Reading OracleMetadata ..");
-            TermedDepositAccount[] accounts = await TermedDepositAccount.Get(AppSettings.Wallets);
+            accounts = await TermedDepositAccount.Get(AppSettings.Wallets);
 
             async void Refresh()
             {
-                await DisplayData(accounts);
+                await DisplayData();
             }
 
             timer = new Timer(TimeSpan.FromMinutes(Minutes));
@@ -54,7 +54,7 @@ namespace AutoHedger
             await Menu.Start();
         }
 
-        private static async Task DisplayData(TermedDepositAccount[] accounts)
+        private static async Task DisplayData()
         {
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
@@ -124,6 +124,7 @@ namespace AutoHedger
 
         private static async Task DisplayContractProposal(TakerContractProposal proposal)
         {
+            Menu.Disable();
             Console.Clear();
             Console.WriteLine(proposal);
 			
@@ -137,7 +138,25 @@ namespace AutoHedger
             Console.WriteLine(makerContractPoposal.Fees[0].Satoshis);
             Console.WriteLine(makerContractPoposal.Fees[1].Satoshis);
             Console.WriteLine(makerContractPoposal.Metadata.StartPrice);
-            Menu.Show();
+            
+            Console.WriteLine("To fund the contract type 'yes'.");
+            Console.WriteLine("Any other answer returns to main screen.");
+            var answer = Console.ReadLine();
+            if (answer.ToUpper() == "YES")
+            {
+                var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
+                    proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
+                    proposal.account.OracleKey,
+                    proposal.bestPremiumDataItem.Item.DurationSeconds,
+                    makerContractPoposal);
+                Console.WriteLine(result);
+                Console.ReadLine();
+                DisplayData();
+            }
+            else
+            {
+                DisplayData();
+            }
         }
 
         class TakerContractProposal(decimal contractAmountBch, PremiumDataItemPlus bestPremiumDataItem, TermedDepositAccount account)

@@ -109,6 +109,7 @@ public class Spinner
 
 public class Menu
 {
+    private bool enabled = true;
     private readonly Dictionary<ConsoleKey, (string Description, Action Action)> menuOptions;
     private readonly ConsoleKey exitOptionKey;
     private readonly string exitOptionDescription;
@@ -147,6 +148,7 @@ public class Menu
         }
 
         Console.WriteLine($"[{exitOptionKey}] {exitOptionDescription}");
+        this.Enable();
     }
 
     /// <summary>
@@ -156,7 +158,7 @@ public class Menu
     {
         while (true)
         {
-            if (Console.KeyAvailable)
+            if (enabled && Console.KeyAvailable)
             {
                 var key = Console.ReadKey(true).Key;
 
@@ -173,5 +175,15 @@ public class Menu
 
             await Task.Delay(100);
         }
+    }
+    
+    public void Disable()
+    {
+        enabled = false;
+    }
+    
+    public void Enable()
+    {
+        enabled = true;
     }
 }

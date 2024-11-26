@@ -126,6 +126,7 @@ public class AnyHedgeManager
 
     public async Task<string> FundContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds, Contract contract)
     {
+        return "not implemented";
         durationSeconds -= 120; //to prevent client/server time diff errors (expected contract duration to be in the range [7200, 7776000] but got 7776052)
 
         var startInfo = new ProcessStartInfo
