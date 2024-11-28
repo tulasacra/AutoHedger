@@ -35,17 +35,18 @@ export const parseWIF = async function(privateKeyWIF)
 };
 
 // Utility function that creates a new UTXO of en exact size needed for funding transactions.
-export const buildPreFundingTransaction = async function(privateKeyWIF, unspentTransactionOutputs, fundingSatoshis)
+export const buildPreFundingTransaction = async function(privateKeyBbWIF, unspentTransactionOutputs, fundingSatoshis, privateKeyWIF)
 {
 	// Parse the private key and generate the intermediary address to use.
-	const [ _privateKey, _publicKey, address ] = await parseWIF(privateKeyWIF);
+	const [ _privateKeyBb, _publicKeyBb, addressBb ] = await parseWIF(privateKeyBbWIF);
+	const [ _privateKey, _publicKey, takerPayoutAddress ] = await parseWIF(privateKeyWIF);
 
 	// Create a transaction output for the amount requested.
-	const output = createOutput(address, fundingSatoshis);
+	const output = createOutput(addressBb, fundingSatoshis);
 
 	// Create a placeholder output representing a change output
 	// NOTE: We set the placeholder satoshi amount to DUST_LIMIT, otherwise this function will throw an error.
-	const placeholderChangeOutput = createOutput(address, DUST_LIMIT);
+	const placeholderChangeOutput = createOutput(takerPayoutAddress, DUST_LIMIT);
 
 	// Generate unsigned transaction inputs for all UTXOs.
 	const unsignedInputs = unspentTransactionOutputs.map((utxo) => createUnsignedInput(utxo));
@@ -74,14 +75,14 @@ export const buildPreFundingTransaction = async function(privateKeyWIF, unspentT
 	// Negative change satoshis indicates the LP doesn't have enough funds - which is an internal error
 	if(changeSatoshis < 0)
 	{
-		throw(new Error(`The provided taker private key/address (${address}) with balance ${totalSatoshis} does not have enough funds ${requiredSatoshis} to enter this position.`));
+		throw(new Error(`The provided taker private key/address (${takerPayoutAddress}) with balance ${totalSatoshis} does not have enough funds ${requiredSatoshis} to enter this position.`));
 	}
 
 	// Add a change output to the transaction if there is enough left
 	if(changeSatoshis > DUST_LIMIT)
 	{
 		// Create and add the change output.
-		const changeOutput = createOutput(address, changeSatoshis);
+		const changeOutput = createOutput(takerPayoutAddress, changeSatoshis);
 		unsignedTransaction.outputs.push(changeOutput);
 	}
 

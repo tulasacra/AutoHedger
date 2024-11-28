@@ -161,7 +161,7 @@ public class AnyHedgeManager
         process.Start();
         process.BeginOutputReadLine();
 
-        await process.StandardInput.WriteLineAsync(accountPrivateKeyWIF);
+        await process.StandardInput.WriteLineAsync($"{accountPrivateKeyWIF},{privateKeyWIF}");
         process.StandardInput.Close();
 
         try

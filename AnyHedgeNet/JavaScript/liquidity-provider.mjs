@@ -164,7 +164,7 @@ const ProposeContract = async function(TAKER_BB_WIF) {
 	
 	return;
 }
-const FundContract = async function(TAKER_WIF) {
+const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	const pendingContractData = JSON.parse(pendingContractDataString, (key, value) => {
 		if (typeof value === 'string' && value.endsWith('n') && /^\d+n$/.test(value)) {
 			return BigInt(value.slice(0, -1));
@@ -188,7 +188,7 @@ const FundContract = async function(TAKER_WIF) {
 	console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
 	
 	// Create a dependency transaction used to manufacture a UTXO of the correct amount
-	const dependencyTransaction = await buildPreFundingTransaction(TAKER_WIF, unspentTransactionOutputs, takerInputSatoshis);
+	const dependencyTransaction = await buildPreFundingTransaction(TAKER_BB_WIF, unspentTransactionOutputs, takerInputSatoshis, TAKER_WIF);
 	console.log(JSON.stringify(dependencyTransaction, replaceBigInt))
 
 	return;
@@ -201,7 +201,7 @@ const FundContract = async function(TAKER_WIF) {
 	const unsignedProposal = anyHedgeManager.createFundingProposal(pendingContractData, dependencyTransactionHash, 0, takerInputSatoshis);
 
 	// Sign the proposal.
-	const signedProposal = await anyHedgeManager.signFundingProposal(TAKER_WIF, unsignedProposal);
+	const signedProposal = await anyHedgeManager.signFundingProposal(TAKER_BB_WIF, unsignedProposal);
 
 	// Define url and arguments needed to fund the contract position.
 	const fundContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/fundContract`;
@@ -237,7 +237,7 @@ process.stdin.on('data', function(data) {
 		ProposeContract(TAKER_BB_WIF);
 	}
 	else if(method == 'fund') {
-		const TAKER_BB_WIF = data.toString().trim();
-		FundContract(TAKER_BB_WIF);
+		const [TAKER_BB_WIF, TAKER_WIF] = data.toString().trim().split(',');
+		FundContract(TAKER_BB_WIF, TAKER_WIF);
 	}
 });
