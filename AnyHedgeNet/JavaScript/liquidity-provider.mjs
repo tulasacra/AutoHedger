@@ -59,6 +59,13 @@ const AUTHENTICATION_TOKEN = process.argv[2];
 // Name a value that can be used as an integer-based boolean (as contracts do)
 const INTEGER_TRUE = BigInt('1');
 
+const pendingContractDataString = process.argv[7];
+const method = process.argv[8];
+
+// to prevent "Do not know how to serialize a BigInt"
+const replaceBigInt = (key, value) =>
+	typeof value === 'bigint' ? value.toString() : value;
+
 // Wrap the example code in an async function to allow async/await.
 const ProposeContract = async function(TAKER_BB_WIF) {
 	// Get service information from the liquidity provider.
@@ -129,9 +136,6 @@ const ProposeContract = async function(TAKER_BB_WIF) {
 	const proposeContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/proposeContract`;
 	const proposeContractArguments = {contractCreationParameters};
 
-	const replaceBigInt = (key, value) =>
-		typeof value === 'bigint' ? value.toString() : value;
-
 	//console.log(JSON.stringify(proposeContractArguments, replaceBigInt))
 
 	// Send the contract proposal to the liquidity provider.
@@ -157,22 +161,31 @@ const ProposeContract = async function(TAKER_BB_WIF) {
 	const {address} = await anyHedgeManager.createContract(contractCreationParameters);
 	const pendingContractData = await anyHedgeManager.getContractStatus(address, TAKER_BB_WIF);
 	console.log(JSON.stringify(pendingContractData, replaceBigInt))
-
+	
 	return;
 }
-const FundContract = async function(TAKER_WIF)
-{	
+const FundContract = async function(TAKER_WIF) {
+	const pendingContractData = JSON.parse(pendingContractDataString, (key, value) => {
+		if (typeof value === 'string' && value.endsWith('n') && /^\d+n$/.test(value)) {
+			return BigInt(value.slice(0, -1));
+		}
+		return value;
+	});
+	console.log(JSON.stringify(pendingContractData, replaceBigInt))
 
+	const liquidityProviderFeeInSatoshis = pendingContractData.fees[0].satoshis * BigInt(-1); //todo why is it positive?
+	console.log(JSON.stringify(liquidityProviderFeeInSatoshis, replaceBigInt))
+	
 	// Calculate how many satoshis the taker needs to prepare for the contract.
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
 	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
-	//console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
+	console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
 	
 	// Fetch all available UTXOs.
 	// NOTE: This will result in automatic consolidation of UTXOs and regular clients should implement their own coin selection strategies.
 	const unspentTransactionOutputs = await fetchUnspentTransactionOutputs(takerPayoutAddress);
-	//console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
+	console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
 	
 	// Create a dependency transaction used to manufacture a UTXO of the correct amount
 	const dependencyTransaction = await buildPreFundingTransaction(TAKER_WIF, unspentTransactionOutputs, takerInputSatoshis);
@@ -219,6 +232,12 @@ const FundContract = async function(TAKER_WIF)
 };
 
 process.stdin.on('data', function(data) {
-    const TAKER_BB_WIF = data.toString().trim();
-    ProposeContract(TAKER_BB_WIF);
+	if(method == 'propose') {
+		const TAKER_BB_WIF = data.toString().trim();
+		ProposeContract(TAKER_BB_WIF);
+	}
+	else if(method == 'fund') {
+		const TAKER_BB_WIF = data.toString().trim();
+		FundContract(TAKER_BB_WIF);
+	}
 });

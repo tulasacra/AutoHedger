@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace AnyHedgeNet;
 
 public class Contract

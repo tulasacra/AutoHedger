@@ -11,7 +11,6 @@ using Timer = System.Timers.Timer;
  * show longs in main
  * move the fees subtraction to the ah.dll
  * improve fee estimate by looking at current settlement fees
- * pass the contract data from propose to fund methods
  * check yield and latest price diffs between main and propose
  * check what happens if new deposits are made in the payout address instead of new contract 
  */
@@ -125,36 +124,43 @@ namespace AutoHedger
         private static async Task DisplayContractProposal(TakerContractProposal proposal)
         {
             Menu.Disable();
-            Console.Clear();
-            Console.WriteLine(proposal);
-			
-            var makerContractPoposal = await AnyHedge.ProposeContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
-                proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
-                proposal.account.OracleKey,
-                proposal.bestPremiumDataItem.Item.DurationSeconds);
-            
-            Console.WriteLine(makerContractPoposal.Metadata.ShortInputInSatoshis);
-            Console.WriteLine(makerContractPoposal.Metadata.DurationInSeconds);
-            Console.WriteLine(makerContractPoposal.Fees[0].Satoshis);
-            Console.WriteLine(makerContractPoposal.Fees[1].Satoshis);
-            Console.WriteLine(makerContractPoposal.Metadata.StartPrice);
-            
-            Console.WriteLine("To fund the contract type 'yes'.");
-            Console.WriteLine("Any other answer returns to main screen.");
-            var answer = Console.ReadLine();
-            if (answer.ToUpper() == "YES")
+            try
             {
-                var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
+                Console.Clear();
+                Console.WriteLine(proposal);
+			
+                var makerContractPoposal = await AnyHedge.ProposeContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                     proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
                     proposal.account.OracleKey,
-                    proposal.bestPremiumDataItem.Item.DurationSeconds,
-                    makerContractPoposal);
-                Console.WriteLine(result);
-                Console.ReadLine();
-                DisplayData();
+                    proposal.bestPremiumDataItem.Item.DurationSeconds);
+            
+                Console.WriteLine(makerContractPoposal.Metadata.ShortInputInSatoshis);
+                Console.WriteLine(makerContractPoposal.Metadata.DurationInSeconds);
+                Console.WriteLine(makerContractPoposal.Fees[0].Satoshis);
+                Console.WriteLine(makerContractPoposal.Fees[1].Satoshis);
+                Console.WriteLine(makerContractPoposal.Metadata.StartPrice);
+            
+                Console.WriteLine("To fund the contract type 'yes'.");
+                Console.WriteLine("Any other answer returns to main screen.");
+                var answer = Console.ReadLine();
+                if (answer.ToUpper() == "YES")
+                {
+                    var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
+                        proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
+                        proposal.account.OracleKey,
+                        proposal.bestPremiumDataItem.Item.DurationSeconds,
+                        makerContractPoposal);
+                    Console.WriteLine(result);
+                }
             }
-            else
+            catch(Exception e)
             {
+                Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
+            }
+            finally
+            {
+                Console.WriteLine("[Enter] returns to main screen.");
+                Console.ReadLine();
                 DisplayData();
             }
         }

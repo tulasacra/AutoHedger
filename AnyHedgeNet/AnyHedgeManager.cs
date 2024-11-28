@@ -83,6 +83,9 @@ public class AnyHedgeManager
         startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(oracleKey);
         startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add("NULL");
+        startInfo.ArgumentList.Add("propose");
+
 
         var process = new Process();
         process.StartInfo = startInfo;
@@ -126,7 +129,6 @@ public class AnyHedgeManager
 
     public async Task<string> FundContract(string payoutAddress, string privateKeyWIF, decimal amountNominal, string oracleKey, double durationSeconds, Contract contract)
     {
-        return "not implemented";
         durationSeconds -= 120; //to prevent client/server time diff errors (expected contract duration to be in the range [7200, 7776000] but got 7776052)
 
         var startInfo = new ProcessStartInfo
@@ -145,6 +147,12 @@ public class AnyHedgeManager
         startInfo.ArgumentList.Add(amountNominal.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add(oracleKey);
         startInfo.ArgumentList.Add(durationSeconds.ToString(CultureInfo.InvariantCulture));
+        startInfo.ArgumentList.Add(JsonConvert.SerializeObject(contract, new JsonSerializerSettings 
+        {
+            ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+            Converters = new[] { new BigIntegerJsonConverter() }
+        }));
+        startInfo.ArgumentList.Add("fund");
 
         var process = new Process();
         process.StartInfo = startInfo;
@@ -328,5 +336,22 @@ public class AnyHedgeManager
         {
             return address;
         }
+    }
+}
+
+public class BigIntegerJsonConverter : JsonConverter<BigInteger>
+{
+    public override BigInteger ReadJson(JsonReader reader, Type objectType, BigInteger existingValue, bool hasExistingValue, JsonSerializer serializer)
+    {
+        //none of this works. JsonReaderException happens before the code gets here.
+        
+        //return BigInteger.Parse(((string)reader.Value).TrimEnd('n'));
+        var token = JToken.Load(reader);
+        return BigInteger.Parse(token.ToString().TrimEnd('n'));
+    }
+
+    public override void WriteJson(JsonWriter writer, BigInteger value, JsonSerializer serializer)
+    {
+        writer.WriteValue(value.ToString()+'n');
     }
 }
