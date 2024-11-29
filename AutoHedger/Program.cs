@@ -212,9 +212,7 @@ namespace AutoHedger
 
             var premiumDataPlus = premiumData
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
-                .Where(x => x.Item.Apy >= AppSettings.MinimumApy ||
-                            x.ApyPlusPriceDelta >= (decimal?)AppSettings.MinimumApy ||
-                            x.YieldPlusPriceDeltaAnnualized >= (decimal?)AppSettings.MinimumApy)
+                .Where(x => x.ApyPriceDeltaAdjusted >= (decimal)AppSettings.MinimumApy)
                 .ToList();
 
             if (premiumDataPlus.Any())
@@ -228,7 +226,7 @@ namespace AutoHedger
             }
 
             TakerContractProposal? takerContractProposal = null;
-            if (walletBalanceBch.HasValue && premiumDataPlus.Any() && !(priceDelta < 0))
+            if (walletBalanceBch.HasValue && premiumDataPlus.Any())
             {
                 var bestContractParameters = GetBestContractParameters_MaxApy(premiumDataPlus, walletBalanceBch.Value);
                 if (bestContractParameters.HasValue)
@@ -257,8 +255,11 @@ namespace AutoHedger
         internal class PremiumDataItemPlus
         {
             public PremiumDataItem Item;
+            // APY+Δ
             public decimal? ApyPlusPriceDelta;
+            // AP(Y+Δ)
             public decimal? YieldPlusPriceDeltaAnnualized;
+            public decimal ApyPriceDeltaAdjusted;
 
             public PremiumDataItemPlus(PremiumDataItem item, decimal? priceDelta)
             {
@@ -267,6 +268,19 @@ namespace AutoHedger
                 {
                     this.ApyPlusPriceDelta = (decimal)item.Apy + priceDelta;
                     this.YieldPlusPriceDeltaAnnualized = (decimal?)Premiums.YieldToApy((item.Yield + (double)priceDelta.Value) / 100, item.DurationDays);
+                    
+                    if (priceDelta >= 0)
+                    {
+                        this.ApyPriceDeltaAdjusted = ApyPlusPriceDelta.Value;
+                    }
+                    else
+                    {
+                        this.ApyPriceDeltaAdjusted = YieldPlusPriceDeltaAnnualized.Value;
+                    }
+                }
+                else
+                {
+                    this.ApyPriceDeltaAdjusted = (decimal)item.Apy;
                 }
             }
         }
