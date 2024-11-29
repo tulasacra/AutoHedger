@@ -10,7 +10,6 @@ using Timer = System.Timers.Timer;
  * reset refresh timer after manual reset
  * show longs in main
  * move the fees subtraction to the ah.dll
- * improve fee estimate by looking at current settlement fees
  * check yield and latest price diffs between main and propose
  * check what happens if new deposits are made in the payout address instead of new contract 
  */
@@ -235,12 +234,12 @@ namespace AutoHedger
                     Console.WriteLine(delimiter);
 
                     var contractAmountBch = bestContractParameters.Value.amount;
-                    
-                    //todo better fees estimation
-                    const decimal feeMultiplier = 1.05m; //5%
-                    if (contractAmountBch * feeMultiplier > walletBalanceBch)
+
+                    var feeMultiplier = 1m + (decimal)bestContractParameters.Value.premiumDataItem.Item.PremiumInfo.SettlementServiceFee / 100m;
+                    const decimal additionalFeeBch = 0.000_030_00m; //miner fees
+                    if (contractAmountBch * feeMultiplier + additionalFeeBch > walletBalanceBch)
                     {
-                        contractAmountBch /= feeMultiplier;
+                        contractAmountBch = (walletBalanceBch.Value - additionalFeeBch) / feeMultiplier;
                     }
 
                     contractAmountBch = Math.Round(contractAmountBch, 8);
