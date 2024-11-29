@@ -58,6 +58,7 @@ namespace AutoHedger
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
+            Console.WriteLine($"Minimum contract size: {AppSettings.MinimumContractSizeBch} BCH");
 
             var contractProposals = new List<TakerContractProposal>();
             try
@@ -204,7 +205,7 @@ namespace AutoHedger
             var priceDelta = (account.LatestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
             Console.WriteLine($"Latest price from OraclesCash: {account.LatestPrice,20:N8} {account.Wallet.Currency} (Δ {priceDelta.Format(2, 0, true)} %)");
 
-            if (walletBalanceBch != null || contractsBalanceBch != 0)
+            if (walletBalanceBch.HasValue || contractsBalanceBch != 0)
             {
                 Console.WriteLine(delimiter);
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
@@ -212,7 +213,7 @@ namespace AutoHedger
 
             var premiumDataPlus = premiumData
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
-                .Where(x => x.ApyPriceDeltaAdjusted >= (decimal)AppSettings.MinimumApy)
+                .Where(x => x.ApyPriceDeltaAdjusted >= AppSettings.MinimumApy)
                 .ToList();
 
             if (premiumDataPlus.Any())
@@ -226,7 +227,7 @@ namespace AutoHedger
             }
 
             TakerContractProposal? takerContractProposal = null;
-            if (walletBalanceBch.HasValue && premiumDataPlus.Any())
+            if (walletBalanceBch > AppSettings.MinimumContractSizeBch && premiumDataPlus.Any())
             {
                 var bestContractParameters = GetBestContractParameters_MaxApy(premiumDataPlus, walletBalanceBch.Value);
                 if (bestContractParameters.HasValue)
@@ -255,7 +256,7 @@ namespace AutoHedger
         internal class PremiumDataItemPlus
         {
             public PremiumDataItem Item;
-            // APY+Δ
+            // APY + Δ
             public decimal? ApyPlusPriceDelta;
             // AP(Y+Δ)
             public decimal? YieldPlusPriceDeltaAnnualized;

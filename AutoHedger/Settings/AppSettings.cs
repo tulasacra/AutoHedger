@@ -15,7 +15,8 @@ namespace AutoHedger
                 .Build();
         }
 
-        public static double MinimumApy => double.Parse(_config["MinimumApy"]);
+        public static decimal MinimumApy => decimal.Parse(_config["MinimumApy"]);
+        public static decimal MinimumContractSizeBch => decimal.Parse(_config["MinimumContractSizeBch"]);
         public static string AccountKey => _config["AccountKey"];
 
         public static List<WalletConfig> Wallets => _config.GetSection("Wallets")
