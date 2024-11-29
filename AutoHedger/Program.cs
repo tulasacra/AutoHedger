@@ -317,7 +317,7 @@ namespace AutoHedger
             var totalBch = walletBalanceBch + contractsBalanceBch;
             decimal? walletPercent = null;
             decimal? contractsPercent = null;
-            if (totalBch.HasValue)
+            if (totalBch.HasValue && totalBch != 0)
             {
                 walletPercent = walletBalanceBch / totalBch * 100;
                 contractsPercent = contractsBalanceBch / totalBch * 100;

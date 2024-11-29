@@ -54,7 +54,7 @@ public class TermedDepositAccount
 
         foreach (var account in accounts.Where(x=>x.Wallet.HasAddress))
         {
-            account.WalletBalanceBch = results.Single(x => x.Key == account.Wallet.Address).Value / 100_000_000m;
+            account.WalletBalanceBch = results.FirstOrDefault(x => x.Key == account.Wallet.Address).Value / 100_000_000m;
             account.WalletBalance = account.WalletBalanceBch.Value * account.LatestPrice;
         }
     }
