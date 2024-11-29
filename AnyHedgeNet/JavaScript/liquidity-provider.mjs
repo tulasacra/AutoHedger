@@ -180,22 +180,22 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	console.log(JSON.stringify(pendingContractData, replaceBigInt))
 
 	const liquidityProviderFeeInSatoshis = pendingContractData.fees[0].satoshis * BigInt(-1); //todo why is it positive?
-	console.log(JSON.stringify(liquidityProviderFeeInSatoshis, replaceBigInt))
+	//console.log(JSON.stringify(liquidityProviderFeeInSatoshis, replaceBigInt))
 	
 	// Calculate how many satoshis the taker needs to prepare for the contract.
 	// NOTE: The settlement service fee, and any potential other fees in other scenarios, exist in the fee structure within the pending contract data.
 	// NOTE: Since the premium from the liquidity provider is not always paid out of bound, we need a special function to manage the liquidity provider fee.
 	const { takerInputSatoshis } = await calculateRequiredFundingSatoshisPerSide(pendingContractData, TAKER_SIDE, liquidityProviderFeeInSatoshis);
-	console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
+	//console.log(JSON.stringify(takerInputSatoshis, replaceBigInt))
 	
 	// Fetch all available UTXOs.
 	// NOTE: This will result in automatic consolidation of UTXOs and regular clients should implement their own coin selection strategies.
 	const unspentTransactionOutputs = await fetchUnspentTransactionOutputs(takerPayoutAddress);
-	console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
+	//console.log(JSON.stringify(unspentTransactionOutputs, replaceBigInt))
 	
 	// Create a dependency transaction used to manufacture a UTXO of the correct amount
 	const dependencyTransaction = await buildPreFundingTransaction(TAKER_BB_WIF, unspentTransactionOutputs, takerInputSatoshis, TAKER_WIF);
-	console.log(JSON.stringify(dependencyTransaction, replaceBigInt))
+	//console.log(JSON.stringify(dependencyTransaction, replaceBigInt))
 
 	// Hash the dependency transaction.
 	const dependencyTransactionHash = hashTransaction(hexToBin(dependencyTransaction));
@@ -204,11 +204,11 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	
 	// Create an unsigned proposal using the manufactured UTXO (by convention at the 0th output)
 	const unsignedProposal = anyHedgeManager.createFundingProposal(pendingContractData, dependencyTransactionHash, 0, takerInputSatoshis);
-	console.log(JSON.stringify(unsignedProposal, replaceBigInt))
+	//console.log(JSON.stringify(unsignedProposal, replaceBigInt))
 
 	// Sign the proposal.
 	const signedProposal = await anyHedgeManager.signFundingProposal(TAKER_BB_WIF, unsignedProposal);
-	console.log(JSON.stringify(signedProposal, replaceBigInt))
+	//console.log(JSON.stringify(signedProposal, replaceBigInt))
 
 	// Define url and arguments needed to fund the contract position.
 	const fundContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/fundContract`;
