@@ -196,7 +196,26 @@ public class AnyHedgeManager
     }
 
 
-    private static Dictionary<string, string?> contractsCache = new();
+    private static Dictionary<string, string?> contractsCache = LoadCache();
+    private const string _contractsCacheFilename = "contracts_cache.json";
+
+    private static Dictionary<string, string?> LoadCache()
+    {
+        string cacheFile = _contractsCacheFilename;
+        if (File.Exists(cacheFile))
+        {
+            string json = File.ReadAllText(cacheFile);
+            return JsonConvert.DeserializeObject<Dictionary<string, string?>>(json) ?? new Dictionary<string, string?>();
+        }
+        return new Dictionary<string, string?>();
+    }
+
+    private static void SaveCache()
+    {
+        string cacheFile = _contractsCacheFilename;
+        string json = JsonConvert.SerializeObject(contractsCache, Formatting.Indented);
+        File.WriteAllText(cacheFile, json);
+    }
 
     private async Task<IEnumerable<string>> GetTxIds_blockchair(string cashAddr)
     {
@@ -310,8 +329,8 @@ public class AnyHedgeManager
         }
 
         // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-        var newContracts = (await Task.WhenAll(tasks)).SelectMany(x => x);
-        var result = contractsCache.Values
+        var newContracts = (await Task.WhenAll(tasks)).SelectMany(x => x).ToArray();
+        List<string> result = contractsCache.Values
             .Concat(newContracts.Select(x => x.contractId))
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => (string)id)
@@ -320,6 +339,11 @@ public class AnyHedgeManager
         foreach (var newContract in newContracts)
         {
             contractsCache.Add(newContract.txid, newContract.contractId);
+        }
+
+        if (newContracts.Any())
+        {
+            SaveCache();
         }
 
         return result;
