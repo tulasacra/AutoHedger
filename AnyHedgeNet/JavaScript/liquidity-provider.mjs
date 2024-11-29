@@ -66,8 +66,7 @@ const method = process.argv[8];
 const replaceBigInt = (key, value) =>
 	typeof value === 'bigint' ? value.toString() : value;
 
-// Wrap the example code in an async function to allow async/await.
-const ProposeContract = async function(TAKER_BB_WIF) {
+const getAnyHedgeManager = async function() {
 	// Get service information from the liquidity provider.
 	const liquidityServiceInformationUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/liquidityServiceInformation`;
 	const liquidityServiceInformationResponse = await fetchJSONGetRequest(liquidityServiceInformationUrl);
@@ -79,6 +78,13 @@ const ProposeContract = async function(TAKER_BB_WIF) {
 
 	// Create an instance of the AnyHedge manager using the provided settlement service.
 	const anyHedgeManager = new AnyHedgeManager({ serviceScheme: settlementService.scheme, serviceDomain: settlementService.host, servicePort: settlementService.port, authenticationToken: AUTHENTICATION_TOKEN });
+
+	return { anyHedgeManager, oracleRelay };
+}
+
+// Wrap the example code in an async function to allow async/await.
+const ProposeContract = async function(TAKER_BB_WIF) {
+	const { anyHedgeManager, oracleRelay } = await getAnyHedgeManager();
 
 	// Define url and arguments needed to prepare a contract position, which will give us necessary details about the liquidity providers side of the contract.
 	const prepareContractPositionUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/prepareContractPosition`;
@@ -191,17 +197,18 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	const dependencyTransaction = await buildPreFundingTransaction(TAKER_BB_WIF, unspentTransactionOutputs, takerInputSatoshis, TAKER_WIF);
 	console.log(JSON.stringify(dependencyTransaction, replaceBigInt))
 
-	return;
-	
-
 	// Hash the dependency transaction.
 	const dependencyTransactionHash = hashTransaction(hexToBin(dependencyTransaction));
 
+	const { anyHedgeManager, oracleRelay } = await getAnyHedgeManager();
+	
 	// Create an unsigned proposal using the manufactured UTXO (by convention at the 0th output)
 	const unsignedProposal = anyHedgeManager.createFundingProposal(pendingContractData, dependencyTransactionHash, 0, takerInputSatoshis);
+	console.log(JSON.stringify(unsignedProposal, replaceBigInt))
 
 	// Sign the proposal.
 	const signedProposal = await anyHedgeManager.signFundingProposal(TAKER_BB_WIF, unsignedProposal);
+	console.log(JSON.stringify(signedProposal, replaceBigInt))
 
 	// Define url and arguments needed to fund the contract position.
 	const fundContractUrl = `${LIQUIDITY_PROVIDER_URL}/api/v2/fundContract`;
@@ -228,7 +235,7 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	// Extract the funding transaction hash from the response.
 	const { fundingTransactionHash } = fundContractResponse;
 
-	console.log(`Funded contract '${pendingContractData.address}' in transaction '${fundingTransactionHash}'.`);
+	console.log(JSON.stringify(`Funded contract '${pendingContractData.address}' in transaction '${fundingTransactionHash}'.`));
 };
 
 process.stdin.on('data', function(data) {
