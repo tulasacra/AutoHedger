@@ -1,5 +1,6 @@
 using AnyHedgeNet;
 using Microsoft.Extensions.Configuration;
+using NBitcoin;
 
 namespace AutoHedger
 {
@@ -30,10 +31,31 @@ namespace AutoHedger
 
     public class WalletConfig
     {
+        private string _privateKeyWIF;
+        private string _address;
+
         public Currency Currency { get; set; }
-        public string Address { get; set; }
-        public string PrivateKeyWIF { get; set; }
-        
-        public bool HasAddress => !string.IsNullOrEmpty(Address) && Address != "bitcoincash:";
+
+        public string Address
+        {
+            get => _address;
+            set => _address = value;
+        }
+
+        public string PrivateKeyWIF
+        {
+            get => _privateKeyWIF;
+            set
+            {
+                _privateKeyWIF = value;
+                if (!HasAddress && !string.IsNullOrEmpty(value))
+                {
+                    var key = new BitcoinSecret(value, Network.Main);
+                    //todo cashaddress _address = key.GetAddress(ScriptPubKeyType.Legacy).ToString();
+                }
+            }
+        }
+
+        public bool HasAddress => !string.IsNullOrEmpty(_address) && _address != "bitcoincash:";
     }
 }
