@@ -21,6 +21,7 @@ namespace AutoHedger
         private static Timer timer;
         const int Minutes = 15;
 
+        private const decimal _satsPerBch = 100_000_000m;
         private const string delimiter = "-------------------------------------------------------------------------------------";
         private static readonly string delimiterBold = $"{Environment.NewLine}===================================================================================================={Environment.NewLine}";
         private static AnyHedgeManager AnyHedge;
@@ -128,18 +129,25 @@ namespace AutoHedger
             {
                 Console.Clear();
                 Console.WriteLine(proposal);
-			
+
                 var makerContractPoposal = await AnyHedge.ProposeContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                     proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
                     proposal.account.OracleKey,
                     proposal.bestPremiumDataItem.Item.DurationSeconds);
-            
-                Console.WriteLine(makerContractPoposal.Metadata.ShortInputInSatoshis);
-                Console.WriteLine(makerContractPoposal.Metadata.DurationInSeconds);
-                Console.WriteLine(makerContractPoposal.Fees[0].Satoshis);
-                Console.WriteLine(makerContractPoposal.Fees[1].Satoshis);
-                Console.WriteLine(makerContractPoposal.Metadata.StartPrice);
-            
+
+                Console.WriteLine();
+                Console.WriteLine("LP contract proposal parameters:");
+                var amountBch = (decimal)makerContractPoposal.Metadata.ShortInputInSatoshis / _satsPerBch;
+                Console.WriteLine($"Size: {amountBch} BCH");
+                Console.WriteLine($"Days: {Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3)}");
+                var liquidityFee = -1 * makerContractPoposal.Fees[0].Satoshis;
+                var settlementFee = makerContractPoposal.Fees[1].Satoshis;
+                var totalFeeBch = (decimal)(liquidityFee + settlementFee) / _satsPerBch;
+                Console.WriteLine($"Total fee: {totalFeeBch} BCH");
+                Console.WriteLine($"Yield: {-totalFeeBch / amountBch * 100: N2} %");
+                var startPrice = (decimal)makerContractPoposal.Metadata.StartPrice / proposal.account.OracleMetadata.ATTESTATION_SCALING;
+                Console.WriteLine($"Price: {startPrice} {proposal.account.Wallet.Currency}");
+                Console.WriteLine();
                 Console.WriteLine("To fund the contract type 'yes'.");
                 Console.WriteLine("Any other answer returns to main screen.");
                 var answer = Console.ReadLine();
@@ -153,7 +161,7 @@ namespace AutoHedger
                     Console.WriteLine(result);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
             }
@@ -298,7 +306,7 @@ namespace AutoHedger
 
                 var settlement = contract.Fundings[0].Settlement;
 
-                decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / 100_000_000m);
+                decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / _satsPerBch);
                 decimal contractPrice = (decimal)settlement.SettlementPrice / oracleMetadata.ATTESTATION_SCALING;
 
 
