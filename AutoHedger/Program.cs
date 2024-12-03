@@ -220,23 +220,35 @@ namespace AutoHedger
 
             var premiumDataPlus = premiumData
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
+                .OrderBy(x => x.Item.DurationDays)
+                .ToList();
+            
+            var premiumDataFiltered = premiumDataPlus
                 .Where(x => x.ApyPriceDeltaAdjusted >= AppSettings.MinimumApy)
                 .ToList();
 
-            if (premiumDataPlus.Any())
+            if (premiumDataFiltered.Any())
             {
-                //Console.WriteLine("Sorted by amount:");
-                //DisplayPremiumsData(premiumData);
-                //Console.WriteLine("Sorted by duration:");
-                var premiumDataByDuration = premiumDataPlus.OrderBy(x => x.Item.DurationDays).ToList();
                 Console.WriteLine(delimiter);
-                DisplayPremiumsData(premiumDataByDuration, priceDelta);
+                DisplayPremiumsData(premiumDataFiltered, priceDelta);
+            }
+            else
+            {
+                premiumDataPlus = premiumDataPlus
+                    .Where(x => x.Item.Apy >= (double)AppSettings.MinimumApy)
+                    .ToList();
+                
+                if (premiumDataPlus.Any())
+                {
+                    Console.WriteLine(delimiter);
+                    DisplayPremiumsData(premiumDataPlus, priceDelta);                
+                }
             }
 
             TakerContractProposal? takerContractProposal = null;
-            if (walletBalanceBch > AppSettings.MinimumContractSizeBch && premiumDataPlus.Any())
+            if (walletBalanceBch > AppSettings.MinimumContractSizeBch && premiumDataFiltered.Any())
             {
-                var bestContractParameters = GetBestContractParameters_MaxApy(premiumDataPlus, walletBalanceBch.Value);
+                var bestContractParameters = GetBestContractParameters_MaxApy(premiumDataFiltered, walletBalanceBch.Value);
                 if (bestContractParameters.HasValue)
                 {
                     Console.WriteLine(delimiter);
