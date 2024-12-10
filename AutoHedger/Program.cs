@@ -7,7 +7,6 @@ using Timer = System.Timers.Timer;
 
 //todo
 /*
- * reset refresh timer after manual reset
  * show longs in main
  * move the fees subtraction to the ah.dll
  * check yield and latest price diffs between main and propose
@@ -19,7 +18,7 @@ namespace AutoHedger
     class Program
     {
         private static Timer timer;
-        const int Minutes = 15;
+        private static TimeSpan TimerMinutes = TimeSpan.FromMinutes(15);
 
         private const decimal _satsPerBch = 100_000_000m;
         private const string delimiter = "-------------------------------------------------------------------------------------";
@@ -42,10 +41,9 @@ namespace AutoHedger
                 await DisplayData();
             }
 
-            timer = new Timer(TimeSpan.FromMinutes(Minutes));
+            timer = new Timer();
             timer.Elapsed += async (sender, e) => Refresh();
             timer.AutoReset = true;
-            timer.Enabled = true;
 
             Menu.AddOption(ConsoleKey.R, "Refresh", Refresh);
 
@@ -55,6 +53,9 @@ namespace AutoHedger
 
         private static async Task DisplayData()
         {
+            timer.Interval = TimerMinutes.TotalMilliseconds;
+            timer.Start();
+            
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
@@ -100,7 +101,7 @@ namespace AutoHedger
             }
             catch (Exception ex)
             {
-                Widgets.WriteLine($"Something went wrong (retrying in {Minutes} minutes): {ex}", ConsoleColor.Red);
+                Widgets.WriteLine($"Something went wrong (retrying in {TimerMinutes.TotalMinutes} minutes): {ex}", ConsoleColor.Red);
             }
 
             #region Add proposals to menu
@@ -124,6 +125,7 @@ namespace AutoHedger
 
         private static async Task DisplayContractProposal(TakerContractProposal proposal)
         {
+            timer.Stop();
             Menu.Disable();
             try
             {
