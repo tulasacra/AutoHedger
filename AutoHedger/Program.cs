@@ -144,7 +144,7 @@ namespace AutoHedger
                 var settlementFee = makerContractPoposal.Fees[1].Satoshis;
                 var totalFeeBch = (decimal)(liquidityFee + settlementFee) / _satsPerBch;
                 Console.WriteLine($"Total fee: {totalFeeBch} BCH");
-                Console.WriteLine($"Yield: {-totalFeeBch / amountBch * 100: N2} %");
+                Console.WriteLine($"Yield: {-totalFeeBch / amountBch * 100:N2} %");
                 var startPrice = (decimal)makerContractPoposal.Metadata.StartPrice / proposal.account.OracleMetadata.ATTESTATION_SCALING;
                 Console.WriteLine($"Price: {startPrice} {proposal.account.Wallet.Currency}");
                 Console.WriteLine();
