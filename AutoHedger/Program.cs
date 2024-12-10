@@ -9,7 +9,6 @@ using Timer = System.Timers.Timer;
 /*
  * show longs in main
  * move the fees subtraction to the ah.dll
- * check yield and latest price diffs between main and propose
  * check what happens if new deposits are made in the payout address instead of new contract 
  */
 
@@ -138,17 +137,40 @@ namespace AutoHedger
                     proposal.bestPremiumDataItem.Item.DurationSeconds);
 
                 Console.WriteLine();
-                Console.WriteLine("LP contract proposal parameters:");
                 var amountBch = (decimal)makerContractPoposal.Metadata.ShortInputInSatoshis / _satsPerBch;
-                Console.WriteLine($"Size: {amountBch} BCH");
-                Console.WriteLine($"Days: {Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3)}");
+                //var days = Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3);
                 var liquidityFee = -1 * makerContractPoposal.Fees[0].Satoshis;
                 var settlementFee = makerContractPoposal.Fees[1].Satoshis;
                 var totalFeeBch = (decimal)(liquidityFee + settlementFee) / _satsPerBch;
-                Console.WriteLine($"Total fee: {totalFeeBch} BCH");
-                Console.WriteLine($"Yield: {-totalFeeBch / amountBch * 100:N2} %");
+                var yield = -totalFeeBch / amountBch * 100;
                 var startPrice = (decimal)makerContractPoposal.Metadata.StartPrice / proposal.account.OracleMetadata.ATTESTATION_SCALING;
-                Console.WriteLine($"Price: {startPrice} {proposal.account.Wallet.Currency}");
+                List<List<string>> rows =
+                [
+                    ["", "Suggested", "LP proposal", "LP proposal %"],
+                    [
+                        "Size:     ",
+                        $"{proposal.contractAmountBch} BCH",
+                        $"{amountBch.Format()} BCH",
+                        $"{(amountBch / proposal.contractAmountBch * 100).Format(2)}"
+                    ],
+                    //["Days:          ", $"{proposal.bestPremiumDataItem.Item.DurationDays}", days.ToString()],
+                    [
+                        "Price:    ",
+                        $"{proposal.account.LatestPrice.Format()} {proposal.account.Wallet.Currency}",
+                        $"{startPrice.Format()} {proposal.account.Wallet.Currency}".ToString(),
+                        $"{(startPrice / proposal.account.LatestPrice * 100).Format(2)}"
+                    ],
+                    //["Total fee:     ", $"{0}", $"{totalFeeBch.Format()} BCH"],
+                    [
+                        "Yield:    ",
+                        $"{proposal.bestPremiumDataItem.Item.Yield.Format(2)} %",
+                        $"{yield.Format(2)} %",
+                        $"{(yield / (decimal)proposal.bestPremiumDataItem.Item.Yield * 100).Format(2)}"
+                    ],
+                ];
+
+                Widgets.DisplayTable(rows);
+                
                 Console.WriteLine();
                 Console.WriteLine("To fund the contract type 'yes'.");
                 Console.WriteLine("Any other answer returns to main screen.");

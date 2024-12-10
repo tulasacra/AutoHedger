@@ -40,6 +40,16 @@ public static class Widgets
             Console.WriteLine(separator);
     }
     
+    public static string Format(this double value, int decimals = 8, int padSize = 17, bool showPlus = false)
+    {
+        return ((decimal?)value).Format(decimals, padSize, showPlus);
+    }
+
+    public static string Format(this decimal value, int decimals = 8, int padSize = 17, bool showPlus = false)
+    {
+        return ((decimal?)value).Format(decimals, padSize, showPlus);
+    }
+    
     public static string Format(this decimal? value, int decimals = 8, int padSize = 17, bool showPlus = false)
     {
         if (!value.HasValue)
