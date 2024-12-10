@@ -161,16 +161,18 @@ namespace AutoHedger
                         proposal.bestPremiumDataItem.Item.DurationSeconds,
                         makerContractPoposal);
                     Console.WriteLine(result);
+                    Console.WriteLine("[Enter] returns to main screen.");
+                    Console.ReadLine();
                 }
             }
             catch (Exception e)
             {
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
+                Console.WriteLine("[Enter] returns to main screen.");
+                Console.ReadLine();
             }
             finally
             {
-                Console.WriteLine("[Enter] returns to main screen.");
-                Console.ReadLine();
                 DisplayData();
             }
         }
