@@ -25,10 +25,10 @@ public static partial class OraclesCashService
             metadata = await GetMetadata(oraclePublicKey);
         }
 
-        return ParsePriceFromMessage(latestMessage.Message, metadata.ATTESTATION_SCALING);
+        return ParsePriceMessage(latestMessage.Message, metadata.ATTESTATION_SCALING).price;
     }
 
-    private static decimal ParsePriceFromMessage(string message, int scaling)
+    public static ParsedPriceMessage ParsePriceMessage(string message, int scaling)
     {
         byte[] messageBytes = Convert.FromHexString(message);
 
@@ -42,7 +42,14 @@ public static partial class OraclesCashService
         int contentSequence = BitConverter.ToInt32(messageBytes, 8);
         int price = BitConverter.ToInt32(messageBytes, 12);
 
-        return (decimal)price / scaling;
+        return new ParsedPriceMessage
+        {
+            messageTimestamp = messageTimestamp,
+            messageSequence = messageSequence,
+            contentSequence = contentSequence,
+            price = (decimal)price / scaling,
+
+        };
     }
 
     public static async Task<decimal[]> GetLatestPrice((string OracleKey, OracleMetadata OracleMetadata)[] o)
@@ -62,4 +69,12 @@ class OracleMessage
     public string Message { get; set; }
     public string PublicKey { get; set; }
     public string Signature { get; set; }
+}
+
+public class ParsedPriceMessage
+{
+    public int messageTimestamp;
+    public int messageSequence;
+    public int contentSequence;
+    public decimal price;
 }

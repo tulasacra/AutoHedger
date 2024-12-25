@@ -338,7 +338,7 @@ namespace AutoHedger
             decimal totalCost = 0;
             decimal remainingBalance = walletBalance.Value;
 
-            foreach (var contract in settledContracts.OrderByDescending(c => c.Parameters.MaturityTimestamp)) //todo actual settlement timestamp
+            foreach (var contract in settledContracts.OrderByDescending(c => OraclesCashService.ParsePriceMessage(c.Fundings[0].Settlement.SettlementMessage, oracleMetadata.ATTESTATION_SCALING).messageSequence))
             {
                 if (remainingBalance == 0) break;
 
