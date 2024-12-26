@@ -47,17 +47,18 @@ public class TermedDepositAccount
         }
     }
 
-    public static void UpdateWalletBalances(TermedDepositAccount[] accounts)
+    public static async Task UpdateWalletBalances(TermedDepositAccount[] accounts)
     {
-        var bchClient = new BitcoinCashClient();
-        var results = bchClient.GetWalletBalances(accounts
+        var addresses = accounts
             .Where(x => x.Wallet.HasAddress)
             .Select(x => x.Wallet.Address)
-            .ToList());
+            .ToList();
+
+        var balanceBch = await ElectrumNetworkProvider.GetBalanceBCH(addresses);
 
         foreach (var account in accounts.Where(x => x.Wallet.HasAddress))
         {
-            account.WalletBalanceBch = results.FirstOrDefault(x => x.Key == account.Wallet.Address).Value / 100_000_000m;
+            account.WalletBalanceBch = balanceBch[account.Wallet.Address];
             account.WalletBalance = account.WalletBalanceBch.Value * account.LatestPrice;
         }
     }

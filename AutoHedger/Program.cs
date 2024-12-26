@@ -80,7 +80,7 @@ namespace AutoHedger
                 Console.Write("Reading wallet balances ..");
                 try
                 {
-                    TermedDepositAccount.UpdateWalletBalances(accounts);
+                    await TermedDepositAccount.UpdateWalletBalances(accounts);
                     Console.WriteLine("OK");
                 }
                 catch (Exception ex)

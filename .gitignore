@@ -8,3 +8,4 @@ api references
 **/appsettings.*.json
 node_modules
 *.user
+.cursorignore

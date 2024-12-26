@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 
 namespace AnyHedgeNet;
 

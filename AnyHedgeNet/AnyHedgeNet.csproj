@@ -7,38 +7,41 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="JavaScript\package.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\status.mjs">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\package-lock.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\node_modules\**\*">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\liquidity-provider.mjs">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\utils\anyhedge.mjs">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\utils\network.mjs">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="JavaScript\utils\wallet.mjs">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+        <None Update="JavaScript\node_modules\**\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\fetchUnspentTransactionOutputs.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\liquidity-provider.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\package-lock.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\package.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\status.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\utils\anyhedge.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\utils\network.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\utils\wallet.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <Target Name="NpmInstall" AfterTargets="CopyFilesToOutputDirectory">
-        <Exec Command="npm ci" WorkingDirectory="$(OutDir)JavaScript" />
+        <Exec Command="npm ci" WorkingDirectory="$(OutDir)JavaScript"/>
     </Target>
 
     <ItemGroup>
-      <PackageReference Include="NBitcoin" Version="7.0.39" />
+        <PackageReference Include="NBitcoin" Version="7.0.39"/>
     </ItemGroup>
 
 </Project>
