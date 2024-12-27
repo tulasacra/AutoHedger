@@ -179,7 +179,12 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 	});
 	console.log(JSON.stringify(pendingContractData, replaceBigInt))
 
-	const liquidityProviderFeeInSatoshis = pendingContractData.fees[0].satoshis * BigInt(-1); //todo why is it positive?
+	let liquidityFeeMultiplier = 1;
+	if (pendingContractData.fees[0].address == takerPayoutAddress)
+	{
+		liquidityFeeMultiplier = -1;
+	}
+	const liquidityProviderFeeInSatoshis = pendingContractData.fees[0].satoshis * BigInt(liquidityFeeMultiplier);
 	//console.log(JSON.stringify(liquidityProviderFeeInSatoshis, replaceBigInt))
 	
 	// Calculate how many satoshis the taker needs to prepare for the contract.

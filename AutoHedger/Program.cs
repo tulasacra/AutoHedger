@@ -70,7 +70,7 @@ namespace AutoHedger
 
                 Console.Write("Reading premiums ..");
                 const string counterLeverage = "5"; //only check 20% hedge
-                var premiumData = (await Premiums.GetPremiums(counterLeverage, 0)).ToList();
+                var premiumData = (await Premiums.GetPremiums(counterLeverage, 5)).ToList();
                 Console.WriteLine("OK");
 
                 Console.Write("Reading latest prices ..");
@@ -139,7 +139,12 @@ namespace AutoHedger
                 Console.WriteLine();
                 var amountBch = (decimal)makerContractPoposal.Metadata.ShortInputInSatoshis / _satsPerBch;
                 //var days = Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3);
-                var liquidityFee = -1 * makerContractPoposal.Fees[0].Satoshis;
+                var liquidityFeeMultiplier = 1;
+                if (makerContractPoposal.Fees[0].Address == proposal.account.Wallet.Address)
+                {
+                    liquidityFeeMultiplier = -1;
+                }
+                var liquidityFee = liquidityFeeMultiplier * makerContractPoposal.Fees[0].Satoshis;
                 var settlementFee = makerContractPoposal.Fees[1].Satoshis;
                 var totalFeeBch = (decimal)(liquidityFee + settlementFee) / _satsPerBch;
                 var yield = -totalFeeBch / amountBch * 100;
