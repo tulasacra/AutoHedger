@@ -149,7 +149,7 @@ public class Menu
 
     public void Show()
     {
-        foreach (var option in menuOptions)
+        foreach (var option in menuOptions.OrderBy(x=>x.Key))
         {
             var keyDisplay = option.Key >= ConsoleKey.D0 && option.Key <= ConsoleKey.D9 
                 ? ((int)option.Key - (int)ConsoleKey.D0).ToString() 
