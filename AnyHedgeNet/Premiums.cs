@@ -8,7 +8,7 @@ namespace AnyHedgeNet
     {
         private static readonly HttpClient client = new HttpClient();
 
-        public static async Task<List<PremiumDataItem>> GetPremiums(string counterLeverage, double maximumPremium, string? currencyOracleKey = null)
+        public static async Task<List<PremiumDataItem>> GetPremiums(string counterLeverage, decimal maximumPremium, string? currencyOracleKey = null)
         {
             string url = "https://premiums.anyhedge.com/api/v2/currentPremiumsV2";
             HttpResponseMessage response = await client.GetAsync(url);
@@ -38,7 +38,7 @@ namespace AnyHedgeNet
                                     {
                                         double durationInSeconds = double.Parse(duration.Key);
                                         double durationInDays = durationInSeconds / 86400.0;
-                                        double yieldInFractions = duration.Value.Total / -100;
+                                        decimal yieldInFractions = duration.Value.Total / -100;
 
                                         return new PremiumDataItem
                                         {
@@ -72,9 +72,14 @@ namespace AnyHedgeNet
             return result;
         }
         
-        public static double YieldToApy(double yieldInFractions, double durationInDays)
+        public static decimal YieldToApy(decimal yieldInFractions, double durationInDays)
         {
-            return (Math.Pow(1 + yieldInFractions, 365 / durationInDays) - 1) * 100;
+            double result = (Math.Pow((double)(1 + yieldInFractions), 365 / durationInDays) - 1) * 100;
+            if (result > (double)decimal.MaxValue)
+                return decimal.MaxValue;
+            if (result < (double)decimal.MinValue)
+                return decimal.MinValue;
+            return (decimal)result;
         }
     }
   
@@ -115,8 +120,8 @@ namespace AnyHedgeNet
         public double DurationSeconds;
         public double DurationDays;
         public PremiumData PremiumInfo;
-        public double Yield;
-        public double Apy;
+        public decimal Yield;
+        public decimal Apy;
         
         public string CurrencyOracleKey;
         public bool BestApyForAmount;
@@ -130,8 +135,8 @@ namespace AnyHedgeNet
     [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public class PremiumData
     {
-        public double Total { get; set; }
-        public double LiquidityPremium { get; set; }
-        public double SettlementServiceFee { get; set; }
+        public decimal Total { get; set; }
+        public decimal LiquidityPremium { get; set; }
+        public decimal SettlementServiceFee { get; set; }
     }
 }

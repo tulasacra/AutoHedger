@@ -170,7 +170,7 @@ namespace AutoHedger
                         "Yield:    ",
                         $"{proposal.bestPremiumDataItem.Item.Yield.Format(2)} %",
                         $"{yield.Format(2)} %",
-                        $"{(yield / (decimal)proposal.bestPremiumDataItem.Item.Yield * 100).Format(2)}"
+                        $"{(yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2)}"
                     ],
                 ];
 
@@ -266,7 +266,7 @@ namespace AutoHedger
             else
             {
                 premiumDataPlus = premiumDataPlus
-                    .Where(x => x.Item.Apy >= (double)AppSettings.MinimumApy)
+                    .Where(x => x.Item.Apy >= AppSettings.MinimumApy)
                     .ToList();
                 
                 if (premiumDataPlus.Any())
@@ -286,7 +286,7 @@ namespace AutoHedger
 
                     var contractAmountBch = bestContractParameters.Value.amount;
 
-                    var feeMultiplier = 1m + (decimal)bestContractParameters.Value.premiumDataItem.Item.PremiumInfo.SettlementServiceFee / 100m;
+                    var feeMultiplier = 1m + bestContractParameters.Value.premiumDataItem.Item.PremiumInfo.SettlementServiceFee / 100m;
                     const decimal additionalFeeBch = 0.000_030_00m; //miner fees
                     if (contractAmountBch * feeMultiplier + additionalFeeBch > walletBalanceBch)
                     {
@@ -317,8 +317,8 @@ namespace AutoHedger
                 this.Item = item;
                 if (priceDelta.HasValue)
                 {
-                    this.ApyPlusPriceDelta = (decimal)item.Apy + priceDelta;
-                    this.YieldPlusPriceDeltaAnnualized = (decimal?)Premiums.YieldToApy((item.Yield + (double)priceDelta.Value) / 100, item.DurationDays);
+                    this.ApyPlusPriceDelta = item.Apy + priceDelta;
+                    this.YieldPlusPriceDeltaAnnualized = Premiums.YieldToApy((item.Yield + priceDelta.Value) / 100, item.DurationDays);
                     
                     if (priceDelta >= 0)
                     {
@@ -331,7 +331,7 @@ namespace AutoHedger
                 }
                 else
                 {
-                    this.ApyPriceDeltaAdjusted = (decimal)item.Apy;
+                    this.ApyPriceDeltaAdjusted = item.Apy;
                 }
             }
         }

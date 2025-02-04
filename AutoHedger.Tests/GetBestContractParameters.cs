@@ -19,9 +19,9 @@ public class Tests
 
     private List<Program.PremiumDataItemPlus> premiumData =
     [
-        new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10, BestApyForAmount = true }, null),
-        new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28.21, BestApyForAmount = true }, null),
-        new(new PremiumDataItem { Amount = 100m, DurationDays = 90, Apy = 21.04, BestApyForAmount = true }, null)
+        new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10m, BestApyForAmount = true }, null),
+        new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28.21m, BestApyForAmount = true }, null),
+        new(new PremiumDataItem { Amount = 100m, DurationDays = 90, Apy = 21.04m, BestApyForAmount = true }, null)
     ];
 
     [Test]
@@ -49,12 +49,12 @@ public class Tests
 
         List<Program.PremiumDataItemPlus> premiumData =
         [
-            new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 5m, DurationDays = 60, Apy = 28.21, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 50m, DurationDays = 60, Apy = 20.21, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 100m, DurationDays = 60, Apy = 20, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 500m, DurationDays = 90, Apy = 1.04, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 5m, DurationDays = 60, Apy = 28.21m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 50m, DurationDays = 60, Apy = 20.21m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 100m, DurationDays = 60, Apy = 20m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 500m, DurationDays = 90, Apy = 1.04m, BestApyForAmount = true }, null),
         ];
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
@@ -71,11 +71,11 @@ public class Tests
 
         List<Program.PremiumDataItemPlus> premiumData =
         [
-            new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28.21, BestApyForAmount = true }, null),
-            new(new PremiumDataItem { Amount = 50m, DurationDays = 60, Apy = 20.21, BestApyForAmount = false }, null),
-            new(new PremiumDataItem { Amount = 10m, DurationDays = 90, Apy = 24.04, BestApyForAmount = false }, null),
-            new(new PremiumDataItem { Amount = 50m, DurationDays = 90, Apy = 21.04, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 14.10m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 28.21m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 50m, DurationDays = 60, Apy = 20.21m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 90, Apy = 24.04m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 50m, DurationDays = 90, Apy = 21.04m, BestApyForAmount = true }, null),
         ];
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
