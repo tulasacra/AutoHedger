@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace AnyHedgeNet;
 
 public class UTXO
@@ -26,8 +28,11 @@ public class ElectrumNetworkProvider
                 CreateNoWindow = true
             }
         };
-
+        StringBuilder resultBuilder = new();
+        process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
         process.Start();
+        process.BeginOutputReadLine();
+        
         try
         {
             await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
@@ -38,7 +43,7 @@ public class ElectrumNetworkProvider
             throw new TimeoutException("Process execution timed out.");
         }
 
-        string result = await process.StandardOutput.ReadToEndAsync();
+        string result = resultBuilder.ToString();
         string error = await process.StandardError.ReadToEndAsync();
 
         if (process.ExitCode != 0)
