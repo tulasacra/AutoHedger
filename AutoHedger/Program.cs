@@ -54,7 +54,7 @@ namespace AutoHedger
         {
             timer.Interval = TimerMinutes.TotalMilliseconds;
             timer.Start();
-            
+
             Console.Clear();
             Console.WriteLine($"Checking at: {DateTime.Now}");
             Console.WriteLine($"Minimum desired APY: {AppSettings.MinimumApy} %");
@@ -76,7 +76,7 @@ namespace AutoHedger
                 Console.Write("Reading latest prices ..");
                 await TermedDepositAccount.UpdateLatestPrices(accounts);
                 Console.WriteLine("OK");
-                
+
                 Console.Write("Reading wallet balances ..");
                 try
                 {
@@ -175,7 +175,7 @@ namespace AutoHedger
                 ];
 
                 Widgets.DisplayTable(rows);
-                
+
                 Console.WriteLine();
                 Console.WriteLine("To fund the contract type 'yes'.");
                 Console.WriteLine("Any other answer returns to main screen.");
@@ -253,7 +253,7 @@ namespace AutoHedger
                 .Select(x => new PremiumDataItemPlus(x, priceDelta))
                 .OrderBy(x => x.Item.DurationDays)
                 .ToList();
-            
+
             var premiumDataFiltered = premiumDataPlus
                 .Where(x => x.ApyPriceDeltaAdjusted >= AppSettings.MinimumApy)
                 .ToList();
@@ -268,11 +268,11 @@ namespace AutoHedger
                 premiumDataPlus = premiumDataPlus
                     .Where(x => x.Item.Apy >= AppSettings.MinimumApy)
                     .ToList();
-                
+
                 if (premiumDataPlus.Any())
                 {
                     Console.WriteLine(delimiter);
-                    DisplayPremiumsData(premiumDataPlus, priceDelta);                
+                    DisplayPremiumsData(premiumDataPlus, priceDelta);
                 }
             }
 
@@ -294,7 +294,7 @@ namespace AutoHedger
                     }
 
                     contractAmountBch = Math.Round(contractAmountBch, 8);
-                    
+
                     takerContractProposal = new TakerContractProposal(contractAmountBch, bestContractParameters.Value.premiumDataItem, account);
                     Console.WriteLine(takerContractProposal);
                 }
@@ -319,7 +319,7 @@ namespace AutoHedger
                 {
                     this.ApyPlusPriceDelta = item.Apy + priceDelta;
                     this.YieldPlusPriceDeltaAnnualized = Premiums.YieldToApy((item.Yield + priceDelta.Value) / 100, item.DurationDays);
-                    
+
                     if (priceDelta >= 0)
                     {
                         this.ApyPriceDeltaAdjusted = ApyPlusPriceDelta.Value;
@@ -402,13 +402,14 @@ namespace AutoHedger
 
             foreach (var item in premiumData)
             {
-                List<string> row = [
+                List<string> row =
+                [
                     item.Item.Amount.ToString(),
                     item.Item.DurationDays.ToString(),
                     item.Item.Yield.ToString("F2"),
                     item.Item.Apy.ToString("F2"),
                 ];
-                
+
                 switch (priceDelta)
                 {
                     case > 0:
@@ -418,7 +419,7 @@ namespace AutoHedger
                         row.Add(item.YieldPlusPriceDeltaAnnualized.Format(2, 0));
                         break;
                 }
-                
+
                 rows.Add(row);
             }
 
