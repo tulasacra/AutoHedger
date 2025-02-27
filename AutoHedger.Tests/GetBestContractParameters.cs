@@ -7,13 +7,14 @@ public class Tests
     {
     }
 
-    private static void AssertContractParameters((decimal amount, Program.PremiumDataItemPlus premiumDataItem)? result, decimal expectedAmount, int expectedDurationDays)
+    private static void AssertContractParameters((decimal amount, Program.PremiumDataItemPlus premiumDataItem)? result, decimal expectedAmount, int expectedDurationDays, decimal expectedApy)
     {
         Assert.That(result, Is.Not.Null);
         Assert.Multiple(() =>
         {
             Assert.That(result.Value.amount, Is.EqualTo(expectedAmount));
             Assert.That(result.Value.premiumDataItem.Item.DurationDays, Is.EqualTo(expectedDurationDays));
+            Assert.That(result.Value.premiumDataItem.Item.Apy, Is.EqualTo(expectedApy));
         });
     }
 
@@ -30,7 +31,7 @@ public class Tests
         decimal walletBalanceBch = 15m;
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
-        AssertContractParameters(result, 10m, 60);
+        AssertContractParameters(result, 10m, 60, 28.21m);
     }
 
     [Test]
@@ -39,7 +40,7 @@ public class Tests
         decimal walletBalanceBch = 1.5m;
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
-        AssertContractParameters(result, 1.5m, 60);
+        AssertContractParameters(result, 1.5m, 60, 28.21m);
     }
 
     [Test]
@@ -58,7 +59,7 @@ public class Tests
         ];
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
-        AssertContractParameters(result, 40m, 60);
+        AssertContractParameters(result, 40m, 60, 20.21m);
     }
     
     [Test]
@@ -79,6 +80,28 @@ public class Tests
         ];
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
-        AssertContractParameters(result, 10m, 60);
+        AssertContractParameters(result, 10m, 60, 28.21m);
+    }
+
+    [Test]
+    public void GetBestContractParameters_MaxApy_SmallWalletBalance()
+    {
+        decimal walletBalanceBch = 0.25118062m;
+
+        List<Program.PremiumDataItemPlus> premiumData =
+        [
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 3, Apy = 12.93m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 3, Apy = 4.99m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 7, Apy = 58.73m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 7, Apy = 53.88m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 100m, DurationDays = 7, Apy = 16.30m, BestApyForAmount = true }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 14, Apy = 25.99m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 30, Apy = 8.46m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 60, Apy = 10.53m, BestApyForAmount = false }, null),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 90, Apy = 8.53m, BestApyForAmount = false }, null),
+        ];
+
+        var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
+        AssertContractParameters(result, 0.25118062m, 7, 58.73m);
     }
 }

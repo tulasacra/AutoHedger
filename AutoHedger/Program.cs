@@ -446,19 +446,18 @@ namespace AutoHedger
 
         internal static (decimal amount, PremiumDataItemPlus premiumDataItem)? GetBestContractParameters_MaxApy(List<PremiumDataItemPlus> premiumData, decimal walletBalanceBch)
         {
-            var bestCandidate = premiumData.MaxBy(x=>x.Item.Apy)!;
+            var bestApyCandidate = premiumData.MaxBy(x => x.Item.Apy)!;
 
-            var upgradeCandidate = premiumData
+            var candidates = premiumData
                 .Where(x =>
                     x.Item.BestApyForAmount &&
-                    x.Item.DurationDays == bestCandidate.Item.DurationDays &&
-                    x.Item.Amount > bestCandidate.Item.Amount)
-                .MaxBy(x => x.Item.Amount);
+                    x.Item.DurationDays == bestApyCandidate.Item.DurationDays &&
+                    x.Item.Amount >= bestApyCandidate.Item.Amount)
+                .OrderBy(x => x.Item.Amount)
+                .ToList();
 
-            if (upgradeCandidate != null)
-            {
-                bestCandidate = upgradeCandidate;
-            }
+            var bestCandidate = candidates.FirstOrDefault(x => x.Item.Amount >= walletBalanceBch)
+                                ?? candidates.Last();
 
             return (Math.Min(bestCandidate.Item.Amount, walletBalanceBch), bestCandidate);
         }
