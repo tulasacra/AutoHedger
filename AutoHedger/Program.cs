@@ -168,8 +168,8 @@ namespace AutoHedger
                     //["Total fee:     ", $"{0}", $"{totalFeeBch.Format()} BCH"],
                     [
                         "Yield:    ",
-                        $"{proposal.bestPremiumDataItem.Item.Yield.Format(2)} %",
-                        $"{yield.Format(2)} %",
+                        $"{proposal.bestPremiumDataItem.Item.Yield.Format(3)} %",
+                        $"{yield.Format(3)} %",
                         $"{(yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2)}"
                     ],
                 ];
