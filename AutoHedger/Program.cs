@@ -170,7 +170,7 @@ namespace AutoHedger
                         "Yield:    ",
                         $"{proposal.bestPremiumDataItem.Item.Yield.Format(3)} %",
                         $"{yield.Format(3)} %",
-                        $"{(yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2)}"
+                        $"{(proposal.bestPremiumDataItem.Item.Yield == 0 ? "N/A" : (yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2))}"
                     ],
                 ];
 
