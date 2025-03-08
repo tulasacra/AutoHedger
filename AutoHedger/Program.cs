@@ -255,7 +255,7 @@ namespace AutoHedger
                 .ToList();
 
             var premiumDataFiltered = premiumDataPlus
-                .Where(x => x.ApyPriceDeltaAdjusted >= AppSettings.MinimumApy)
+                .Where(x => walletBalanceBch > AppSettings.MinimumContractSizeBch && x.ApyPriceDeltaAdjusted >= AppSettings.MinimumApy)
                 .ToList();
 
             if (premiumDataFiltered.Any())
