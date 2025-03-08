@@ -286,7 +286,7 @@ namespace AutoHedger
 
                     var contractAmountBch = bestContractParameters.Value.amount;
 
-                    var feeMultiplier = 1m + bestContractParameters.Value.premiumDataItem.Item.PremiumInfo.SettlementServiceFee / 100m;
+                    var feeMultiplier = 1.01m + bestContractParameters.Value.premiumDataItem.Item.PremiumInfo.SettlementServiceFee / 100m;
                     const decimal additionalFeeBch = 0.000_030_00m; //miner fees
                     if (contractAmountBch * feeMultiplier + additionalFeeBch > walletBalanceBch)
                     {
