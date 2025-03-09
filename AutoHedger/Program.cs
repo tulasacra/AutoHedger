@@ -63,30 +63,22 @@ namespace AutoHedger
             var contractProposals = new List<TakerContractProposal>();
             try
             {
-                Console.Write("Reading contracts ..");
-                var contractAddresses = await AnyHedge.GetContractAddresses();
-                var contracts = await AnyHedge.GetContracts(contractAddresses);
-                Console.WriteLine("OK");
-
-                Console.Write("Reading premiums ..");
+                Console.Write("Fetched");
+                
+                var tasks = new List<Task>(4);
+                var contractsTask = AnyHedge.GetContractAddresses().ContinueWith(task => AnyHedge.GetContracts(task.Result)).Unwrap();
+                tasks.Add(contractsTask.ContinueWith(_ => Console.Write(" ..Contracts")));
                 const string counterLeverage = "5"; //only check 20% hedge
-                var premiumData = (await Premiums.GetPremiums(counterLeverage, 5)).ToList();
-                Console.WriteLine("OK");
-
-                Console.Write("Reading latest prices ..");
-                await TermedDepositAccount.UpdateLatestPrices(accounts);
-                Console.WriteLine("OK");
-
-                Console.Write("Reading wallet balances ..");
-                try
-                {
-                    await TermedDepositAccount.UpdateWalletBalances(accounts);
-                    Console.WriteLine("OK");
-                }
-                catch (Exception ex)
-                {
-                    Widgets.WriteLine($"Error getting wallet balance: {ex.Message}", ConsoleColor.Red);
-                }
+                var premiumDataTask = Premiums.GetPremiums(counterLeverage, 5);
+                tasks.Add(premiumDataTask.ContinueWith(_ => Console.Write(" ..Premium data")));
+                tasks.Add(TermedDepositAccount.UpdateLatestPrices(accounts).ContinueWith(_ => Console.Write(" ..Latest prices")));
+                tasks.Add(TermedDepositAccount.UpdateWalletBalances(accounts).ContinueWith(_ => Console.Write(" ..Wallet balances")));
+                
+                await Task.WhenAll(tasks);
+                Console.WriteLine(" ..DONE");
+                    
+                var contracts = await contractsTask;
+                var premiumData = await premiumDataTask;
 
                 foreach (var account in accounts)
                 {
