@@ -6,6 +6,8 @@ namespace AutoHedger;
 
 public class TermedDepositAccount
 {
+    private const decimal _satsPerBch = 100_000_000m;
+
     public WalletConfig Wallet;
     public string OracleKey;
     public OracleMetadata OracleMetadata;
@@ -13,6 +15,10 @@ public class TermedDepositAccount
     public decimal LatestPrice;
     public decimal? WalletBalance;
     public decimal? WalletBalanceBch;
+    
+    public decimal? ContractsBalanceBch = null;
+    public decimal? ContractsBalance = null;
+    public decimal? BchAcquisitionCostFifo = null;
 
     private TermedDepositAccount(WalletConfig wallet, OracleMetadata oracleMetadata, string? oracleKey = null)
     {
@@ -35,6 +41,46 @@ public class TermedDepositAccount
         }
 
         return await Task.WhenAll(tasks);
+    }
+    
+    public void UpdateContractInfo(List<Contract> contracts)
+    {
+        var oracleKey = this.OracleKey;
+        OracleMetadata? oracleMetadata = this.OracleMetadata;
+        
+        var activeContracts = contracts
+            .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+            .Where(x => x.Fundings[0].Settlement == null).ToList();
+        var settledContracts = contracts
+            .Where(x => x.Parameters.OraclePublicKey == oracleKey)
+            .Where(x => x.Fundings[0].Settlement != null).ToList();
+        this.ContractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
+        this.ContractsBalanceBch = this.ContractsBalance / this.LatestPrice;
+        this.BchAcquisitionCostFifo = CalculateFifoCost(this.WalletBalanceBch, settledContracts, oracleMetadata);  
+    }
+    
+    private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
+    {
+        if (!walletBalance.HasValue || walletBalance == 0 || !settledContracts.Any()) return null;
+
+        decimal totalCost = 0;
+        decimal remainingBalance = walletBalance.Value;
+
+        foreach (var contract in settledContracts.OrderByDescending(c => OraclesCashService.ParsePriceMessage(c.Fundings[0].Settlement.SettlementMessage, oracleMetadata.ATTESTATION_SCALING).messageSequence))
+        {
+            if (remainingBalance == 0) break;
+
+            var settlement = contract.Fundings[0].Settlement;
+
+            decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / _satsPerBch);
+            decimal contractPrice = (decimal)settlement.SettlementPrice / oracleMetadata.ATTESTATION_SCALING;
+
+
+            totalCost += contractAmount * contractPrice;
+            remainingBalance -= contractAmount;
+        }
+
+        return totalCost / (walletBalance - remainingBalance);
     }
 
     public static async Task UpdateLatestPrices(TermedDepositAccount[] accounts)

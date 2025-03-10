@@ -89,6 +89,12 @@ namespace AutoHedger
                         contractProposals.Add(takerContractProposal);
                     }
                 }
+
+                if (accounts.Length > 1)
+                {
+                    Console.WriteLine(delimiterBold);
+                    DisplayTotalBalances(accounts);
+                }
             }
             catch (Exception ex)
             {
@@ -210,26 +216,13 @@ namespace AutoHedger
 
         private static async Task<TakerContractProposal?> DisplayData(TermedDepositAccount account, List<Contract> contracts, List<PremiumDataItem> premiumData)
         {
-            var oracleKey = account.OracleKey;
-            OracleMetadata? oracleMetadata = account.OracleMetadata;
-
             decimal? walletBalanceBch = account.WalletBalanceBch;
             decimal? walletBalance = account.WalletBalance;
-
-
-            decimal? contractsBalanceBch = null;
-            decimal? contractsBalance = null;
-            decimal? bchAcquisitionCostFifo = null;
-
-            var activeContracts = contracts
-                .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-                .Where(x => x.Fundings[0].Settlement == null).ToList();
-            var settledContracts = contracts
-                .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-                .Where(x => x.Fundings[0].Settlement != null).ToList();
-            contractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
-            contractsBalanceBch = contractsBalance / account.LatestPrice;
-            bchAcquisitionCostFifo = CalculateFifoCost(walletBalanceBch, settledContracts, oracleMetadata);
+            
+            account.UpdateContractInfo(contracts);
+            decimal? contractsBalanceBch = account.ContractsBalanceBch;
+            decimal? contractsBalance = account.ContractsBalance;
+            decimal? bchAcquisitionCostFifo = account.BchAcquisitionCostFifo;
 
             Console.WriteLine($"BCH acquisition cost FIFO: {bchAcquisitionCostFifo.Format(8, 24)} {account.Wallet.Currency}");
             var priceDelta = (account.LatestPrice - bchAcquisitionCostFifo) / bchAcquisitionCostFifo * 100;
@@ -238,7 +231,7 @@ namespace AutoHedger
             if (walletBalanceBch.HasValue || contractsBalanceBch != 0)
             {
                 Console.WriteLine(delimiter);
-                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, oracleMetadata, account.Wallet);
+                DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, account.OracleMetadata, account.Wallet);
             }
 
             var premiumDataPlus = premiumData
@@ -328,30 +321,6 @@ namespace AutoHedger
             }
         }
 
-        private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
-        {
-            if (!walletBalance.HasValue || walletBalance == 0 || !settledContracts.Any()) return null;
-
-            decimal totalCost = 0;
-            decimal remainingBalance = walletBalance.Value;
-
-            foreach (var contract in settledContracts.OrderByDescending(c => OraclesCashService.ParsePriceMessage(c.Fundings[0].Settlement.SettlementMessage, oracleMetadata.ATTESTATION_SCALING).messageSequence))
-            {
-                if (remainingBalance == 0) break;
-
-                var settlement = contract.Fundings[0].Settlement;
-
-                decimal contractAmount = Math.Min(remainingBalance, settlement.ShortPayoutInSatoshis / _satsPerBch);
-                decimal contractPrice = (decimal)settlement.SettlementPrice / oracleMetadata.ATTESTATION_SCALING;
-
-
-                totalCost += contractAmount * contractPrice;
-                remainingBalance -= contractAmount;
-            }
-
-            return totalCost / (walletBalance - remainingBalance);
-        }
-
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
             OracleMetadata oracleMetadata, WalletConfig wallet)
         {
@@ -372,6 +341,31 @@ namespace AutoHedger
                 ["Wallet balance:          ", walletBalanceBch.Format(), walletBalance.Format(assetDecimals), walletPercent.Format(2, 7)],
                 ["Active contracts balance:", contractsBalanceBch.Format(), contractsBalance.Format(assetDecimals), contractsPercent.Format(2, 7)],
                 ["Total balance:           ", totalBch.Format(), (walletBalance + contractsBalance).Format(assetDecimals), ""]
+            ];
+
+            Widgets.DisplayTable(rows, borders: false);
+        }
+        
+        private static void DisplayTotalBalances(TermedDepositAccount[] accounts)
+        {
+            decimal? walletBalanceBch = accounts.Sum(a => a.WalletBalanceBch);
+            decimal? contractsBalanceBch = accounts.Sum(a => a.ContractsBalanceBch);
+            
+            var totalBch = walletBalanceBch + contractsBalanceBch;
+            decimal? walletPercent = null;
+            decimal? contractsPercent = null;
+            if (totalBch.HasValue && totalBch != 0)
+            {
+                walletPercent = walletBalanceBch / totalBch * 100;
+                contractsPercent = contractsBalanceBch / totalBch * 100;
+            }
+
+            List<List<string>> rows =
+            [
+                ["", "BCH", "%"],
+                ["Total wallet balance:          ", walletBalanceBch.Format(), walletPercent.Format(2, 7)],
+                ["Total active contracts balance:", contractsBalanceBch.Format(), contractsPercent.Format(2, 7)],
+                ["Total balance:                 ", totalBch.Format(), ""]
             ];
 
             Widgets.DisplayTable(rows, borders: false);
