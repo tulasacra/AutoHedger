@@ -279,8 +279,16 @@ public class AnyHedgeManager
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
         string cashAddr = AddBchPrefix(legacyAddress.ToString());
 
-        //var txIds = await GetTxIds_blockchair(cashAddr);
-        var txIds = await GetTxIds_fullstack(legacyAddress.ToString());
+        IEnumerable<string> txIds;
+        try
+        {
+            txIds = await GetTxIds_fullstack(legacyAddress.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetTxIds_fullstack: {ex.Message}");
+            txIds = await GetTxIds_blockchair(cashAddr);
+        }
 
         List<Task<List<(string txid, string? contractId)>>> tasks = new();
         using HttpClient client = new HttpClient();
