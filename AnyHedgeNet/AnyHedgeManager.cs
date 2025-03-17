@@ -193,28 +193,6 @@ public class AnyHedgeManager
         //return JsonConvert.DeserializeObject<Contract>(result);
     }
 
-
-    private static Dictionary<string, string?> contractsCache = LoadCache();
-    private const string _contractsCacheFilename = "contracts_cache.json";
-
-    private static Dictionary<string, string?> LoadCache()
-    {
-        string cacheFile = _contractsCacheFilename;
-        if (File.Exists(cacheFile))
-        {
-            string json = File.ReadAllText(cacheFile);
-            return JsonConvert.DeserializeObject<Dictionary<string, string?>>(json) ?? new Dictionary<string, string?>();
-        }
-        return new Dictionary<string, string?>();
-    }
-
-    private static void SaveCache()
-    {
-        string cacheFile = _contractsCacheFilename;
-        string json = JsonConvert.SerializeObject(contractsCache, Formatting.Indented);
-        File.WriteAllText(cacheFile, json);
-    }
-
     private async Task<IEnumerable<string>> GetTxIds_blockchair(string cashAddr)
     {
         using HttpClient client = new HttpClient();
@@ -234,7 +212,7 @@ public class AnyHedgeManager
             {
                 string txid = tx["hash"].ToString();
                 // only outgoing transactions are contract funding candidates
-                return tx["balance_change"].ToString().StartsWith('-') && !contractsCache.ContainsKey(txid);
+                return tx["balance_change"].ToString().StartsWith('-') && !ContractAddressCache.Instance.ContainsKey(txid);
             })
             .Select(tx => tx["hash"].ToString());
 
@@ -258,13 +236,12 @@ public class AnyHedgeManager
             .Where(delegate(JToken tx)
             {
                 string txid = tx["tx_hash"].ToString();
-                return !contractsCache.ContainsKey(txid);
+                return !ContractAddressCache.Instance.ContainsKey(txid);
             })
             .Select(tx => tx["tx_hash"].ToString());
 
         return txIds;
     }
-
 
     public async Task<List<string>> GetContractAddresses()
     {
@@ -336,7 +313,7 @@ public class AnyHedgeManager
 
         // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
         var newContracts = (await Task.WhenAll(tasks)).SelectMany(x => x).ToArray();
-        List<string> result = contractsCache.Values
+        List<string> result = ContractAddressCache.Instance.Values
             .Concat(newContracts.Select(x => x.contractId))
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => (string)id)
@@ -344,12 +321,12 @@ public class AnyHedgeManager
 
         foreach (var newContract in newContracts)
         {
-            contractsCache.Add(newContract.txid, newContract.contractId);
+            ContractAddressCache.Instance.Add(newContract.txid, newContract.contractId);
         }
 
         if (newContracts.Any())
         {
-            SaveCache();
+            ContractAddressCache.Save();
         }
 
         return result;
