@@ -8,6 +8,8 @@ public class Contract
     public Metadata Metadata { get; set; }
     public List<Funding> Fundings { get; set; }
     public List<Fee> Fees { get; set; }
+    
+    public bool IsSettled => Fundings != null && Fundings[0].Settlement != null;
 }
 
 public class Parameters

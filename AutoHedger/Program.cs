@@ -66,7 +66,11 @@ namespace AutoHedger
                 Console.Write("Fetched");
                 
                 var tasks = new List<Task>(4);
-                var contractsTask = AnyHedge.GetContractAddresses().ContinueWith(task => AnyHedge.GetContracts(task.Result)).Unwrap();
+                var contractsTask = AnyHedge.GetContractAddresses().ContinueWith(task =>
+                {
+                    Console.Write(" ..ContractAddresses");
+                    return AnyHedge.GetContracts(task.Result);
+                }).Unwrap();
                 tasks.Add(contractsTask.ContinueWith(_ => Console.Write(" ..Contracts")));
                 const string counterLeverage = "5"; //only check 20% hedge
                 var premiumDataTask = Premiums.GetPremiums(counterLeverage, 5);

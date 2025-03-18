@@ -50,10 +50,10 @@ public class TermedDepositAccount
         
         var activeContracts = contracts
             .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-            .Where(x => x.Fundings[0].Settlement == null).ToList();
+            .Where(x => !x.IsSettled).ToList();
         var settledContracts = contracts
             .Where(x => x.Parameters.OraclePublicKey == oracleKey)
-            .Where(x => x.Fundings[0].Settlement != null).ToList();
+            .Where(x => x.IsSettled).ToList();
         this.ContractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
         this.ContractsBalanceBch = this.ContractsBalance / this.LatestPrice;
         this.BchAcquisitionCostFifo = CalculateFifoCost(this.WalletBalanceBch, settledContracts, oracleMetadata);  
