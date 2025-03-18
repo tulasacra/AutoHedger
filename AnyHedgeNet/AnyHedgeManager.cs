@@ -275,62 +275,18 @@ public class AnyHedgeManager
             Console.WriteLine($"Error in GetTxIds_fullstack: {ex.Message}");
             txIds = await GetTxIds_blockchair(cashAddr);
         }
-
-        List<Task<List<(string txid, string? contractId)>>> tasks = new();
-        using HttpClient client = new HttpClient();
-
-        foreach (var txids in txIds.Chunk(10))
-        {
-            tasks.Add(Task.Run(async () =>
-            {
-                string txUrl = $"https://api.blockchair.com/bitcoin-cash/dashboards/transactions/{string.Join(',', txids)}";
-                HttpResponseMessage txResponse = await client.GetAsync(txUrl);
-
-                if (!txResponse.IsSuccessStatusCode)
-                {
-                    throw new Exception($"Error fetching transactions: {txResponse.ReasonPhrase}");
-                }
-
-                string txJsonResult = await txResponse.Content.ReadAsStringAsync();
-                JObject txJson = JObject.Parse(txJsonResult);
-
-                var results = new List<(string txId, string? contractId)>();
-                foreach (JProperty tx in txJson["data"])
-                {
-                    //var txid = tx["transaction"]["hash"].ToString();
-                    var txid = tx.Name;
-                    var outputs = tx.Value["outputs"];
-
-                    string? contractId = null;
-                    foreach (var output in outputs)
-                    {
-                        string type = output["type"].ToString();
-
-                        if (type == "scripthash")
-                        {
-                            contractId = output["recipient"].ToString();
-                            break;
-                        }
-                    }
-
-                    results.Add((txid, contractId));
-                }
-
-                return results;
-            }));
-        }
-
+        
         // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-        var newContracts = (await Task.WhenAll(tasks)).SelectMany(x => x).ToArray();
+        var newContracts = await BlockchairApi.GetTransactions(txIds.ToList());
         List<string> result = ContractAddressCache.Instance.Dictionary.Values
-            .Concat(newContracts.Select(x => x.contractId))
+            .Concat(newContracts.Select(x => x.ContractId))
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => (string)id)
             .ToList();
 
         foreach (var newContract in newContracts)
         {
-            ContractAddressCache.Instance.Dictionary.AddOrReplace(newContract.txid, newContract.contractId);
+            ContractAddressCache.Instance.Dictionary.AddOrReplace(newContract.TxId, newContract.ContractId);
         }
 
         if (newContracts.Any())
