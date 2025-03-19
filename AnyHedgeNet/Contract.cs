@@ -9,7 +9,7 @@ public class Contract
     public List<Funding> Fundings { get; set; }
     public List<Fee> Fees { get; set; }
     
-    public bool IsSettled => Fundings != null && Fundings[0].Settlement != null;
+    public bool IsSettled => Fundings != null && Fundings.Any() && Fundings[0].Settlement != null;
 }
 
 public class Parameters

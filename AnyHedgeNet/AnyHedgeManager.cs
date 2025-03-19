@@ -65,8 +65,11 @@ public class AnyHedgeManager
         }
         
         var deserializeObject = JsonConvert.DeserializeObject<Contract>(result);
-        ContractCache.Instance.Dictionary.AddOrReplace(contractAddress, deserializeObject);
-        //ContractCache.Instance.Save();
+        if (deserializeObject.IsSettled)
+        {
+            ContractCache.Instance.Dictionary.AddOrReplace(contractAddress, deserializeObject);
+            //ContractCache.Instance.Save();
+        }
         return deserializeObject;
     }
 
