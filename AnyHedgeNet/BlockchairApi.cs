@@ -43,14 +43,14 @@ public static class BlockchairApi
             var outputsJson = txData["outputs"];
             var inputsJson = txData["inputs"];
 
-            string? contractId = null;
+            string? contractAddress = null;
             foreach (var output in outputsJson)
             {
                 string type = output["type"].ToString();
 
                 if (type == "scripthash")
                 {
-                    contractId = output["recipient"].ToString();
+                    contractAddress = output["recipient"].ToString();
                     break;
                 }
             }
@@ -124,7 +124,7 @@ public static class BlockchairApi
             var transaction = new Transaction
             {
                 TxId = txid,
-                ContractId = contractId,
+                ContractAddress = contractAddress,
                 RawData = txData,
                 Inputs = inputs,
                 Outputs = outputs
@@ -139,7 +139,7 @@ public static class BlockchairApi
     public class Transaction
     {
         public string TxId { get; set; }
-        public string? ContractId { get; set; }
+        public string? ContractAddress { get; set; }
         public JToken RawData { get; set; }
         public List<TransactionInput> Inputs { get; set; }
         public List<TransactionOutput> Outputs { get; set; }

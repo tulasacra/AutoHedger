@@ -13,6 +13,9 @@
         <None Update="JavaScript\fetchUnspentTransactionOutputs.mjs">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
+        <None Update="JavaScript\getHistory.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
         <None Update="JavaScript\liquidity-provider.mjs">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>

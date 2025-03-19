@@ -202,56 +202,6 @@ public class AnyHedgeManager
         //return JsonConvert.DeserializeObject<Contract>(result);
     }
 
-    private async Task<IEnumerable<string>> GetTxIds_blockchair(string cashAddr)
-    {
-        using HttpClient client = new HttpClient();
-        string url = $"https://api.blockchair.com/bitcoin-cash/dashboards/address/{cashAddr}?transaction_details=true";
-        HttpResponseMessage response = await client.GetAsync(url);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
-        }
-
-        string jsonResult = await response.Content.ReadAsStringAsync();
-        JObject json = JObject.Parse(jsonResult);
-
-        var data = json["data"][cashAddr];
-        var txIds = data["transactions"]
-            .Where(delegate(JToken tx)
-            {
-                string txid = tx["hash"].ToString();
-                // only outgoing transactions are contract funding candidates
-                return tx["balance_change"].ToString().StartsWith('-') && !ContractAddressCache.Instance.Dictionary.ContainsKey(txid);
-            })
-            .Select(tx => tx["hash"].ToString());
-
-        return txIds;
-    }
-
-    private async Task<IEnumerable<string>> GetTxIds_fullstack(string legacyAddress)
-    {
-        using HttpClient client = new HttpClient();
-        string url = $"https://api.fullstack.cash/v5/electrumx/transactions/{legacyAddress}";
-        HttpResponseMessage response = await client.GetAsync(url);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new Exception($"Error fetching data: {response.ReasonPhrase}. URL: {url}");
-        }
-
-        string jsonResult = await response.Content.ReadAsStringAsync();
-        JObject json = JObject.Parse(jsonResult);
-
-        var txIds = json["transactions"]
-            .Where(delegate(JToken tx)
-            {
-                string txid = tx["tx_hash"].ToString();
-                return !ContractAddressCache.Instance.Dictionary.ContainsKey(txid);
-            })
-            .Select(tx => tx["tx_hash"].ToString());
-
-        return txIds;
-    }
-
     public async Task<List<string>> GetContractAddresses()
     {
         if (string.IsNullOrEmpty(accountPrivateKeyWIF))
@@ -265,30 +215,37 @@ public class AnyHedgeManager
         BitcoinAddress legacyAddress = pubKey.GetAddress(ScriptPubKeyType.Legacy, network);
         string cashAddr = AddBchPrefix(legacyAddress.ToString());
 
-        IEnumerable<string> txIds;
-        try
-        {
-            txIds = await GetTxIds_fullstack(legacyAddress.ToString());
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error in GetTxIds_fullstack: {ex.Message}");
-            txIds = await GetTxIds_blockchair(cashAddr);
-        }
+        var txIds = await ElectrumNetworkProvider.GetTxIds(legacyAddress.ToString());
+        txIds = txIds.Where(x=> !ContractAddressCache.Instance.Dictionary.ContainsKey(x)).ToList(); 
+
+
+        var newContracts = (await BlockchairApi.GetTransactions(txIds.ToList()))
+            .Select(x => new ContractMetadata()
+            {
+                FundingTxId = x.TxId,
+                PreFundingTxId = x.Inputs.First().TransactionHash,
+                ContractAddress = x.ContractAddress
+            })
+            .ToList();
+
+        //var prefundingTxs = await BlockchairApi.GetTransactions(newContracts.Select(x => x.PreFundingTxId).ToList());
+        // for (int i = 0; i < prefundingTxs.Count; i++)
+        // {
+        //     newContracts[i].PreFundingAddress = prefundingTxs[i].Inputs.First().Recipient;
+        // }
         
         // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-        var newContracts = await BlockchairApi.GetTransactions(txIds.ToList());
         List<string> result = ContractAddressCache.Instance.Dictionary.Values
-            .Concat(newContracts.Select(x => x.ContractId))
+            .Concat(newContracts.Select(x => x.ContractAddress))
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => (string)id)
             .ToList();
 
         foreach (var newContract in newContracts)
         {
-            ContractAddressCache.Instance.Dictionary.AddOrReplace(newContract.TxId, newContract.ContractId);
-        }
+            ContractAddressCache.Instance.Dictionary.AddOrReplace(newContract.FundingTxId, newContract.ContractAddress);
 
+        }
         if (newContracts.Any())
         {
             ContractAddressCache.Instance.Save();
@@ -297,6 +254,13 @@ public class AnyHedgeManager
         return result;
     }
 
+    public class ContractMetadata
+    {
+        public string FundingTxId;
+        public string PreFundingTxId;
+        public string PreFundingAddress;
+        public string ContractAddress;
+    }
     static string AddBchPrefix(string address)
     {
         const string prefix = "bitcoincash:";

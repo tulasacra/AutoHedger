@@ -1,4 +1,6 @@
 using System.Text;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace AnyHedgeNet;
 
@@ -66,5 +68,48 @@ public class ElectrumNetworkProvider
         }
 
         return balances;
+    }
+
+    public static async Task<List<string>> GetTxIds(string address)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = "JavaScript",
+                FileName = "node",
+                Arguments = $"getHistory.mjs {address}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+        StringBuilder resultBuilder = new();
+        process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
+        process.Start();
+        process.BeginOutputReadLine();
+        
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (TimeoutException)
+        {
+            process.Kill();
+            throw new TimeoutException("Process execution timed out.");
+        }
+
+        string result = resultBuilder.ToString();
+        string error = await process.StandardError.ReadToEndAsync();
+
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"{error}{Environment.NewLine}{result}");
+        }
+
+        List<string> transactionIds = System.Text.Json.JsonSerializer.Deserialize<List<string>>(result);
+        
+        return transactionIds;
     }
 }
