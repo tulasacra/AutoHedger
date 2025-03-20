@@ -6,9 +6,17 @@ public static class BlockchairApi
 {
     public static async Task<List<Transaction>> GetTransactions(IList<string> txIds)
     {
-        using HttpClient client = new HttpClient();
+        var fromCache = txIds.Select(id => TxCache.Instance.Dictionary.TryGetValue(id, out var tx) ? tx : null)
+            .Where(tx => tx != null)
+            .ToList();
         
-        var chunks = txIds.Chunk(10).ToArray();
+        if (fromCache.Count == txIds.Count)
+            return fromCache!;
+            
+        var missingTxIds = txIds.Where(id => !TxCache.Instance.Dictionary.ContainsKey(id)).ToList();
+        
+        using HttpClient client = new HttpClient();
+        var chunks = missingTxIds.Chunk(10).ToArray();
         var tasks = new Task<List<Transaction>>[chunks.Length];
         
         for (int i = 0; i < chunks.Length; i++)
@@ -16,9 +24,24 @@ public static class BlockchairApi
             var chunk = chunks[i];
             tasks[i] = GetTransactionsChunk(client, chunk);
         }
+
+        foreach (var task in tasks)
+        {
+            await task;
+            foreach (var result in task.Result)
+            {
+                TxCache.Instance.Dictionary.GetOrAdd(result.TxId, result);
+            }
+            TxCache.Instance.Save();
+            if (chunks.Count() > 3)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(2));
+            }
+        }
         
-        var results = await Task.WhenAll(tasks);
-        return results.SelectMany(x => x).ToList();
+        //var results = await Task.WhenAll(tasks);
+        //return results.SelectMany(x => x).ToList();
+        return tasks.SelectMany(x => x.Result).Concat(fromCache).ToList()!; 
     }
     
     private static async Task<List<Transaction>> GetTransactionsChunk(HttpClient client, string[] txIdsChunk)

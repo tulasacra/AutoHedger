@@ -39,6 +39,13 @@ internal class ContractAddressCache : Cache<string?>
     public static ContractAddressCache Instance = new();
 }
 
+internal class TxCache : Cache<BlockchairApi.Transaction>
+{
+    protected override string Filename => "tx_cache.json";
+    
+    public static TxCache Instance = new();
+}
+
 internal class ContractCache : Cache<Contract>
 {
     protected override string Filename => "contract_cache.json";
