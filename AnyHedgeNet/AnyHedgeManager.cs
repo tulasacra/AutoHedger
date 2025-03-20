@@ -67,7 +67,7 @@ public class AnyHedgeManager
         var deserializeObject = JsonConvert.DeserializeObject<Contract>(result);
         if (deserializeObject.IsSettled)
         {
-            ContractCache.Instance.Dictionary.AddOrReplace(contractAddress, deserializeObject);
+            ContractCache.Instance.Dictionary.GetOrAdd(contractAddress, deserializeObject);
             //ContractCache.Instance.Save();
         }
         return deserializeObject;
@@ -205,11 +205,11 @@ public class AnyHedgeManager
         //return JsonConvert.DeserializeObject<Contract>(result);
     }
 
-    public async Task<List<string>> GetContractAddresses()
+    public async Task<List<TxMetadata>> GetTransactions()
     {
         if (string.IsNullOrEmpty(accountPrivateKeyWIF))
         {
-            return new List<string>(0);
+            return new List<TxMetadata>(0);
         }
 
         Network network = Network.Main;
@@ -219,62 +219,76 @@ public class AnyHedgeManager
         string cashAddr = AddBchPrefix(legacyAddress.ToString());
 
         var txIds = await ElectrumNetworkProvider.GetTxIds(legacyAddress.ToString());
-        txIds = txIds.Where(x=> !ContractAddressCache.Instance.Dictionary.ContainsKey(x)).ToList(); 
 
-
-        var newContracts = (await BlockchairApi.GetTransactions(txIds.ToList()))
-            .Select(x => new ContractMetadata()
+        var newTransactions = (await BlockchairApi.GetTransactions(txIds
+                .Where(x => !TxMetadataCache.Instance.Dictionary.ContainsKey(x))
+                .ToList()))
+            .Select(x => new TxMetadata()
             {
-                FundingTxId = x.TxId,
-                PreFundingTxId = x.Inputs.First().TransactionHash,
-                ContractAddress = x.ContractAddress
+                TxId = x.TxId,
+                PreFundingTxId = x.ContractAddress == null ? null : x.Inputs.First().TransactionHash,
+                ContractAddress = AddBchPrefix(x.ContractAddress)
             })
             .ToList();
 
-        //var prefundingTxs = await BlockchairApi.GetTransactions(newContracts.Select(x => x.PreFundingTxId).ToList());
-        // for (int i = 0; i < prefundingTxs.Count; i++)
-        // {
-        //     newContracts[i].PreFundingAddress = prefundingTxs[i].Inputs.First().Recipient;
-        // }
-        
-        // add newContracts to those from cache and filter out null/empty (txids that are not contract fundings) 
-        List<string> result = ContractAddressCache.Instance.Dictionary.Values
-            .Concat(newContracts.Select(x => x.ContractAddress))
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Select(id => (string)id)
+        var prefundingTxs = await BlockchairApi.GetTransactions(newTransactions
+            .Where(x=>x.PreFundingTxId != null)
+            .Select(x => x.PreFundingTxId!)
+            .ToList());
+        foreach (var tx in newTransactions.Where(x=>x.PreFundingTxId != null))
+        {
+            tx.PreFundingAddress = AddBchPrefix(prefundingTxs.First(x=>tx.PreFundingTxId! == x.TxId).Inputs.First().Recipient);
+        }
+
+        // add newTransactions to those from cache and filter out null/empty (transactions that are not contract fundings) 
+        var result = TxMetadataCache.Instance.Dictionary.Values
+            .Concat(newTransactions)
+            .Where(tx => !string.IsNullOrEmpty(tx.ContractAddress))
             .ToList();
 
-        foreach (var newContract in newContracts)
+        foreach (var newContract in newTransactions)
         {
-            ContractAddressCache.Instance.Dictionary.AddOrReplace(newContract.FundingTxId, newContract.ContractAddress);
-
+            TxMetadataCache.Instance.Dictionary.GetOrAdd(newContract.TxId, newContract);
         }
-        if (newContracts.Any())
+        if (newTransactions.Any())
         {
-            ContractAddressCache.Instance.Save();
+            TxMetadataCache.Instance.Save();
         }
 
         return result;
     }
 
-    public class ContractMetadata
+    public class TxMetadata
     {
-        public string FundingTxId;
-        public string PreFundingTxId;
-        public string PreFundingAddress;
-        public string ContractAddress;
-    }
-    static string AddBchPrefix(string address)
-    {
-        const string prefix = "bitcoincash:";
-        if (!address.StartsWith(prefix))
+        public string TxId;
+        public string? PreFundingTxId;
+        private string? _contractAddress;
+        private string? _preFundingAddress;
+
+        public string? PreFundingAddress
         {
-            return $"{prefix}{address}";
+            get => _preFundingAddress;
+            set => _preFundingAddress = AddBchPrefix(value);
         }
-        else
+
+        public string? ContractAddress
+        {
+            get => _contractAddress;
+            set => _contractAddress = AddBchPrefix(value);
+        }
+    }
+
+    static string? AddBchPrefix(string? address)
+    {
+        if (string.IsNullOrEmpty(address)) return null;
+        
+        const string prefix = "bitcoincash:";
+        if (address.StartsWith(prefix))
         {
             return address;
         }
+
+        return $"{prefix}{address}";
     }
 }
 

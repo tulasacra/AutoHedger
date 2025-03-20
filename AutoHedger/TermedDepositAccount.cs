@@ -15,6 +15,7 @@ public class TermedDepositAccount
     public decimal LatestPrice;
     public decimal? WalletBalance;
     public decimal? WalletBalanceBch;
+    public decimal? OriginalDeposit;
     
     public decimal? ContractsBalanceBch = null;
     public decimal? ContractsBalance = null;
@@ -43,7 +44,7 @@ public class TermedDepositAccount
         return await Task.WhenAll(tasks);
     }
     
-    public void UpdateContractInfo(List<Contract> contracts)
+    public void UpdateContractInfo(List<AnyHedgeManager.TxMetadata> transactions, List<Contract> contracts)
     {
         var oracleKey = this.OracleKey;
         OracleMetadata? oracleMetadata = this.OracleMetadata;
@@ -56,7 +57,15 @@ public class TermedDepositAccount
             .Where(x => x.IsSettled).ToList();
         this.ContractsBalance = activeContracts.Sum(c => c.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
         this.ContractsBalanceBch = this.ContractsBalance / this.LatestPrice;
-        this.BchAcquisitionCostFifo = CalculateFifoCost(this.WalletBalanceBch, settledContracts, oracleMetadata);  
+        this.BchAcquisitionCostFifo = CalculateFifoCost(this.WalletBalanceBch, settledContracts, oracleMetadata);
+
+        var originalDepositContractIds = transactions
+            .Where(x => x.PreFundingAddress != this.Wallet.Address)
+            .Select(x => x.ContractAddress)
+            .ToList();
+        var originalDepositContracts = contracts
+            .Where(x => originalDepositContractIds.Contains(x.Address) && x.Parameters.OraclePublicKey == oracleKey);
+        this.OriginalDeposit = originalDepositContracts.Sum(x => x.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
     }
     
     private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)

@@ -78,6 +78,8 @@ public class OracleMetadata
     // -57
     public string SOURCE_DENOMINATOR_UNIT_CODE; // Short code of the original source data denominator (commonly ISO-4217 currency codes)
 
+    public int AssetDecimals => this.ATTESTATION_SCALING.ToString().Length - 1;
+
     internal void ParseMessage(OracleMessage message)
     {
         var parsedMessage = ParseMessage(message.Message);

@@ -66,28 +66,30 @@ namespace AutoHedger
                 Console.Write("Fetched");
                 
                 var tasks = new List<Task>(4);
-                var contractsTask = AnyHedge.GetContractAddresses().ContinueWith(task =>
+                var transactionsTask = AnyHedge.GetTransactions();
+                var contractsTask = transactionsTask.ContinueWith(task =>
                 {
-                    Console.Write(" ..ContractAddresses");
-                    return AnyHedge.GetContracts(task.Result);
+                    Console.Write(" ..Transactions");
+                    return AnyHedge.GetContracts(task.Result.Select(x=>x.ContractAddress).ToList());
                 }).Unwrap();
                 tasks.Add(contractsTask.ContinueWith(_ => Console.Write(" ..Contracts")));
                 const string counterLeverage = "5"; //only check 20% hedge
                 var premiumDataTask = Premiums.GetPremiums(counterLeverage, 5);
-                tasks.Add(premiumDataTask.ContinueWith(_ => Console.Write(" ..Premium data")));
+                tasks.Add(premiumDataTask.ContinueWith(_ => Console.Write(" ..Premiums")));
                 tasks.Add(TermedDepositAccount.UpdateLatestPrices(accounts).ContinueWith(_ => Console.Write(" ..Latest prices")));
                 tasks.Add(TermedDepositAccount.UpdateWalletBalances(accounts).ContinueWith(_ => Console.Write(" ..Wallet balances")));
                 
                 await Task.WhenAll(tasks);
                 Console.WriteLine(" ..DONE");
                     
+                var transactions = await transactionsTask;
                 var contracts = await contractsTask;
                 var premiumData = await premiumDataTask;
 
                 foreach (var account in accounts)
                 {
                     Console.WriteLine(delimiterBold);
-                    var takerContractProposal = await DisplayData(account, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList());
+                    var takerContractProposal = await DisplayData(account, transactions, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList());
                     if (takerContractProposal != null && !string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
                         contractProposals.Add(takerContractProposal);
@@ -218,12 +220,13 @@ namespace AutoHedger
             }
         }
 
-        private static async Task<TakerContractProposal?> DisplayData(TermedDepositAccount account, List<Contract> contracts, List<PremiumDataItem> premiumData)
+        private static async Task<TakerContractProposal?> DisplayData(TermedDepositAccount account, List<AnyHedgeManager.TxMetadata> transactions,
+            List<Contract> contracts, List<PremiumDataItem> premiumData)
         {
             decimal? walletBalanceBch = account.WalletBalanceBch;
             decimal? walletBalance = account.WalletBalance;
             
-            account.UpdateContractInfo(contracts);
+            account.UpdateContractInfo(transactions, contracts);
             decimal? contractsBalanceBch = account.ContractsBalanceBch;
             decimal? contractsBalance = account.ContractsBalance;
             decimal? bchAcquisitionCostFifo = account.BchAcquisitionCostFifo;
@@ -236,6 +239,16 @@ namespace AutoHedger
             {
                 Console.WriteLine(delimiter);
                 DisplayBalances(walletBalanceBch, walletBalance, contractsBalanceBch, contractsBalance, account.OracleMetadata, account.Wallet);
+            }
+
+            if (account.OriginalDeposit > 0)
+            {
+                Console.WriteLine(delimiter);
+                Console.WriteLine($"Original deposit: {account.OriginalDeposit.Format(account.OracleMetadata.AssetDecimals)} {account.Wallet.Currency}");
+                var totalBalance = walletBalance + contractsBalance;
+                var yield = totalBalance - account.OriginalDeposit; 
+                var yieldPercent = (totalBalance / account.OriginalDeposit - 1) * 100;
+                Console.WriteLine($"Yield:            {yield.Format(account.OracleMetadata.AssetDecimals)} {account.Wallet.Currency} ({yieldPercent.Format(2, 0)} %)");
             }
 
             var premiumDataPlus = premiumData
@@ -328,7 +341,7 @@ namespace AutoHedger
         private static void DisplayBalances(decimal? walletBalanceBch, decimal? walletBalance, decimal? contractsBalanceBch, decimal? contractsBalance,
             OracleMetadata oracleMetadata, WalletConfig wallet)
         {
-            int assetDecimals = oracleMetadata.ATTESTATION_SCALING.ToString().Length - 1;
+            int assetDecimals = oracleMetadata.AssetDecimals;
 
             var totalBch = walletBalanceBch + contractsBalanceBch;
             decimal? walletPercent = null;

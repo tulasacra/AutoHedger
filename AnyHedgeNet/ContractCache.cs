@@ -32,11 +32,11 @@ internal abstract class Cache<T>
     }
 }
 
-internal class ContractAddressCache : Cache<string?>
+internal class TxMetadataCache : Cache<AnyHedgeManager.TxMetadata>
 {
-    protected override string Filename => "contract_address_cache.json";
+    protected override string Filename => "tx_metadata_cache.json";
     
-    public static ContractAddressCache Instance = new();
+    public static TxMetadataCache Instance = new();
 }
 
 internal class TxCache : Cache<BlockchairApi.Transaction>
