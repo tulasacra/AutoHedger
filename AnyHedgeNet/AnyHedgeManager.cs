@@ -18,6 +18,12 @@ public class AnyHedgeManager
 
     public async Task<List<Contract>> GetContracts(List<string> contractAddress)
     {
+        var fromCache = contractAddress.Select(id => ContractCache.Instance.TryGetValue(id, out var tx) ? tx : null)
+            .Where(tx => tx != null)
+            .ToList();
+        if (fromCache.Count == contractAddress.Count)
+            return fromCache!;
+        
         var contractTasks = contractAddress.Select(address => GetContract(address));
         var contracts = await Task.WhenAll(contractTasks);
         ContractCache.Instance.Save();
@@ -26,9 +32,9 @@ public class AnyHedgeManager
 
     private async Task<Contract> GetContract(string contractAddress)
     {
-        if (ContractCache.Instance.Dictionary.ContainsKey(contractAddress))
+        if (ContractCache.Instance.TryGetValue(contractAddress, out var cachedContract))
         {
-            return ContractCache.Instance.Dictionary[contractAddress];
+            return cachedContract;
         }
         
         var process = new Process
@@ -67,7 +73,7 @@ public class AnyHedgeManager
         var deserializeObject = JsonConvert.DeserializeObject<Contract>(result);
         if (deserializeObject.IsSettled)
         {
-            ContractCache.Instance.Dictionary.GetOrAdd(contractAddress, deserializeObject);
+            ContractCache.Instance.Add(contractAddress, deserializeObject);
             //ContractCache.Instance.Save();
         }
         return deserializeObject;
@@ -221,7 +227,7 @@ public class AnyHedgeManager
         var txIds = await ElectrumNetworkProvider.GetTxIds(legacyAddress.ToString());
 
         var newTransactions = (await BlockchairApi.GetTransactions(txIds
-                .Where(x => !TxMetadataCache.Instance.Dictionary.ContainsKey(x))
+                .Where(x => !TxMetadataCache.Instance.ContainsKey(x))
                 .ToList()))
             .Select(x => new TxMetadata()
             {
@@ -241,14 +247,14 @@ public class AnyHedgeManager
         }
 
         // add newTransactions to those from cache and filter out null/empty (transactions that are not contract fundings) 
-        var result = TxMetadataCache.Instance.Dictionary.Values
+        var result = TxMetadataCache.Instance.Values
             .Concat(newTransactions)
             .Where(tx => !string.IsNullOrEmpty(tx.ContractAddress))
             .ToList();
 
         foreach (var newContract in newTransactions)
         {
-            TxMetadataCache.Instance.Dictionary.GetOrAdd(newContract.TxId, newContract);
+            TxMetadataCache.Instance.Add(newContract.TxId, newContract);
         }
         if (newTransactions.Any())
         {

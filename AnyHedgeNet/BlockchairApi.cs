@@ -6,14 +6,14 @@ public static class BlockchairApi
 {
     public static async Task<List<Transaction>> GetTransactions(IList<string> txIds)
     {
-        var fromCache = txIds.Select(id => TxCache.Instance.Dictionary.TryGetValue(id, out var tx) ? tx : null)
+        var fromCache = txIds.Select(id => TxCache.Instance.TryGetValue(id, out var tx) ? tx : null)
             .Where(tx => tx != null)
             .ToList();
         
         if (fromCache.Count == txIds.Count)
             return fromCache!;
             
-        var missingTxIds = txIds.Where(id => !TxCache.Instance.Dictionary.ContainsKey(id)).ToList();
+        var missingTxIds = txIds.Where(id => !TxCache.Instance.ContainsKey(id)).ToList();
         
         using HttpClient client = new HttpClient();
         var chunks = missingTxIds.Chunk(10).ToArray();
@@ -30,7 +30,7 @@ public static class BlockchairApi
             await task;
             foreach (var result in task.Result)
             {
-                TxCache.Instance.Dictionary.GetOrAdd(result.TxId, result);
+                TxCache.Instance.Add(result.TxId, result);
             }
             TxCache.Instance.Save();
             if (chunks.Count() > 3)
