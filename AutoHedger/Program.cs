@@ -17,7 +17,7 @@ namespace AutoHedger
     class Program
     {
         private static Timer timer;
-        private static TimeSpan TimerMinutes = TimeSpan.FromMinutes(15);
+        private static TimeSpan TimerMinutes = TimeSpan.FromMinutes(3);
 
         private const decimal _satsPerBch = 100_000_000m;
         private const string delimiter = "-------------------------------------------------------------------------------------";
