@@ -28,7 +28,7 @@ namespace AnyHedgeNet
             {
                 if (currencyOracleKey == null || currencyData.Key == currencyOracleKey)
                 {
-                    var premiumDataItems = currencyData.Value.TakerHedge
+                    var premiumDataItems = currencyData.Value.Fees.TakerHedge
                         .SelectMany(amount => amount.Value
                             .SelectMany(leverage => leverage.Value
                                 .Where(cl => cl.Key == counterLeverage)
@@ -128,6 +128,12 @@ namespace AnyHedgeNet
     }
 
     public class CurrencyData
+    {
+        public long Timestamp { get; set; }
+        public Fees Fees { get; set; }
+    }
+
+    public class Fees
     {
         public Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, PremiumData>>>> TakerHedge { get; set; }
     }
