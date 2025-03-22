@@ -14,7 +14,7 @@ public class Tests
         {
             Assert.That(result.Value.amount, Is.EqualTo(expectedAmount));
             Assert.That(result.Value.premiumDataItem.Item.DurationDays, Is.EqualTo(expectedDurationDays));
-            Assert.That(result.Value.premiumDataItem.Item.Apy, Is.EqualTo(expectedApy));
+            Assert.That(result.Value.premiumDataItem.ApyPriceDeltaAdjusted, Is.EqualTo(expectedApy));
         });
     }
 
@@ -103,5 +103,28 @@ public class Tests
 
         var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
         AssertContractParameters(result, 0.25118062m, 7, 58.73m);
+    }
+
+    [Test]
+    public void GetBestContractParameters_MaxApy_NegativeDelta()
+    {
+        decimal walletBalanceBch = 0.57074761m;
+        decimal acquisitionCostFifo = 455.59001197m;
+        decimal latestPriceFromOraclesCash = 453.73000000m;
+        decimal? priceDelta = (latestPriceFromOraclesCash - acquisitionCostFifo) / acquisitionCostFifo * 100;
+        
+        List<Program.PremiumDataItemPlus> premiumData =
+        [
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 14, Apy = 15.37m, BestApyForAmount = true, Yield = 0.55m }, priceDelta),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 60, Apy = 12.27m, BestApyForAmount = false, Yield = 1.92m }, priceDelta),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 60, Apy = 12.06m, BestApyForAmount = true, Yield = 1.89m }, priceDelta),
+            new(new PremiumDataItem { Amount = 100m, DurationDays = 60, Apy = 9.87m, BestApyForAmount = true, Yield = 1.56m }, priceDelta),
+            new(new PremiumDataItem { Amount = 1m, DurationDays = 90, Apy = 11.23m, BestApyForAmount = false, Yield = 2.66m }, priceDelta),
+            new(new PremiumDataItem { Amount = 10m, DurationDays = 90, Apy = 11.10m, BestApyForAmount = false, Yield = 2.63m }, priceDelta),
+            new(new PremiumDataItem { Amount = 100m, DurationDays = 90, Apy = 9.66m, BestApyForAmount = false, Yield = 2.30m }, priceDelta),
+        ];
+
+        var result = Program.GetBestContractParameters_MaxApy(premiumData, walletBalanceBch);
+        AssertContractParameters(result, 0.57074761m, 60, 9.55710293625982m);
     }
 }
