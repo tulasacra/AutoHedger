@@ -5,11 +5,14 @@ using OraclesCash;
 using Timer = System.Timers.Timer;
 
 
+/*
+ * new deposits are to be made on https://app.bchbull.com/ (not by depositing to payout address), to keep the "FIFO cost" and "Original deposit" correct
+ */
+
 //todo
 /*
- * show longs in main
- * move the fees subtraction to the ah.dll
- * check what happens if new deposits are made in the payout address instead of new contract 
+ * show also long premiums?
+ * move the fees subtraction to the AnyHedgeNet.dll
  */
 
 namespace AutoHedger
