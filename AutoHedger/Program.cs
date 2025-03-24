@@ -142,39 +142,52 @@ namespace AutoHedger
 
                 Console.WriteLine();
                 var amountBch = (decimal)makerContractPoposal.Metadata.ShortInputInSatoshis / _satsPerBch;
-                //var days = Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3);
+                var days = Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3);
                 var liquidityFeeMultiplier = 1;
                 if (makerContractPoposal.Fees[0].Address == proposal.account.Wallet.Address)
                 {
                     liquidityFeeMultiplier = -1;
                 }
+
                 var liquidityFee = liquidityFeeMultiplier * makerContractPoposal.Fees[0].Satoshis;
                 var settlementFee = makerContractPoposal.Fees[1].Satoshis;
                 var totalFeeBch = (decimal)(liquidityFee + settlementFee) / _satsPerBch;
                 var yield = -totalFeeBch / amountBch * 100;
                 var startPrice = (decimal)makerContractPoposal.Metadata.StartPrice / proposal.account.OracleMetadata.ATTESTATION_SCALING;
+
+                decimal? acquisitionCostFifo = proposal.account.BchAcquisitionCostFifo;
+                decimal? priceDelta = (startPrice - acquisitionCostFifo) / acquisitionCostFifo * 100;
+                PremiumDataItemPlus premiumDataItemPlus = new(new PremiumDataItem(amountBch, days, yield), priceDelta);
+                var apyPriceDeltaAdjusted = premiumDataItemPlus.ApyPriceDeltaAdjusted;
+                
                 List<List<string>> rows =
                 [
                     ["", "Suggested", "LP proposal", "LP proposal %"],
                     [
-                        "Size:     ",
-                        $"{proposal.contractAmountBch} BCH",
+                        "Size:                  ",
+                        $"{proposal.contractAmountBch.Format()} BCH",
                         $"{amountBch.Format()} BCH",
                         $"{(amountBch / proposal.contractAmountBch * 100).Format(2)}"
                     ],
                     //["Days:          ", $"{proposal.bestPremiumDataItem.Item.DurationDays}", days.ToString()],
                     [
-                        "Price:    ",
+                        "Price:                 ",
                         $"{proposal.account.LatestPrice.Format()} {proposal.account.Wallet.Currency}",
                         $"{startPrice.Format()} {proposal.account.Wallet.Currency}".ToString(),
                         $"{(startPrice / proposal.account.LatestPrice * 100).Format(2)}"
                     ],
                     //["Total fee:     ", $"{0}", $"{totalFeeBch.Format()} BCH"],
                     [
-                        "Yield:    ",
+                        "Yield:                 ",
                         $"{proposal.bestPremiumDataItem.Item.Yield.Format(3)} %",
                         $"{yield.Format(3)} %",
                         $"{(proposal.bestPremiumDataItem.Item.Yield == 0 ? "N/A" : (yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2))}"
+                    ],
+                    [
+                        "APY, price Δ adjusted: ",
+                        $"{proposal.bestPremiumDataItem.ApyPriceDeltaAdjusted.Format(3)} %",
+                        $"{apyPriceDeltaAdjusted.Format(3)} %",
+                        $"{(proposal.bestPremiumDataItem.ApyPriceDeltaAdjusted == 0 ? "N/A" : (apyPriceDeltaAdjusted / proposal.bestPremiumDataItem.ApyPriceDeltaAdjusted * 100).Format(2))}"
                     ],
                 ];
 
@@ -320,7 +333,7 @@ namespace AutoHedger
                 if (priceDelta.HasValue)
                 {
                     this.ApyPlusPriceDelta = item.Apy + priceDelta;
-                    this.YieldPlusPriceDeltaAnnualized = Premiums.YieldToApy((item.Yield + priceDelta.Value) / 100, item.DurationDays);
+                    this.YieldPlusPriceDeltaAnnualized = Premiums.YieldToApy(item.Yield + priceDelta.Value, item.DurationDays);
 
                     if (priceDelta >= 0)
                     {

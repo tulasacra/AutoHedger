@@ -38,7 +38,7 @@ namespace AnyHedgeNet
                                     {
                                         double durationInSeconds = double.Parse(duration.Key);
                                         double durationInDays = durationInSeconds / 86400.0;
-                                        decimal yieldInFractions = duration.Value.Total / -100;
+                                        decimal yieldInPercent = duration.Value.Total / -1;
 
                                         return new PremiumDataItem
                                         {
@@ -48,8 +48,8 @@ namespace AnyHedgeNet
                                             DurationSeconds = durationInSeconds,
                                             DurationDays = durationInDays,
                                             PremiumInfo = duration.Value,
-                                            Yield = yieldInFractions * 100,
-                                            Apy = YieldToApy(yieldInFractions, durationInDays),
+                                            Yield = yieldInPercent,
+                                            Apy = YieldToApy(yieldInPercent, durationInDays),
                                         };
                                     }))))
                         .ToList();
@@ -72,8 +72,9 @@ namespace AnyHedgeNet
             return result;
         }
         
-        public static decimal YieldToApy(decimal yieldInFractions, double durationInDays)
+        public static decimal YieldToApy(decimal yieldInPercent, double durationInDays)
         {
+            var yieldInFractions = yieldInPercent / 100;
             double result = (Math.Pow((double)(1 + yieldInFractions), 365 / durationInDays) - 1) * 100;
             if (result > (double)decimal.MaxValue)
                 return decimal.MaxValue;
@@ -125,6 +126,18 @@ namespace AnyHedgeNet
         
         public string CurrencyOracleKey;
         public bool BestApyForAmount;
+
+        public PremiumDataItem()
+        {
+        }
+
+        public PremiumDataItem(decimal amount, double durationDays, decimal yield)
+        {
+            Amount = amount;
+            DurationDays = durationDays;
+            Yield = yield;
+            Apy = Premiums.YieldToApy(yield, durationDays);
+        }
     }
 
     public class CurrencyData
