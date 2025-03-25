@@ -177,7 +177,7 @@ const FundContract = async function(TAKER_BB_WIF, TAKER_WIF) {
 		}
 		return value;
 	});
-	console.log(JSON.stringify(pendingContractData, replaceBigInt))
+	//console.log(JSON.stringify(pendingContractData, replaceBigInt))
 
 	let liquidityFeeMultiplier = 1;
 	if (pendingContractData.fees[0].address == takerPayoutAddress)

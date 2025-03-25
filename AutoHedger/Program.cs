@@ -145,6 +145,7 @@ namespace AutoHedger
 
                 Console.WriteLine();
                 var amountBch = (decimal)makerContractPoposal.Metadata.ShortInputInSatoshis / _satsPerBch;
+                var amount = makerContractPoposal.Metadata.NominalUnits / proposal.account.OracleMetadata.ATTESTATION_SCALING;
                 var days = Math.Round(TimeSpan.FromSeconds((double)makerContractPoposal.Metadata.DurationInSeconds).TotalDays, 3);
                 var liquidityFeeMultiplier = 1;
                 if (makerContractPoposal.Fees[0].Address == proposal.account.Wallet.Address)
@@ -210,6 +211,8 @@ namespace AutoHedger
                     Console.WriteLine(result);
                     Console.WriteLine("[Enter] returns to main screen.");
                     Console.ReadLine();
+                    File.AppendAllLines("_transaction_log.txt", 
+                        [$"{DateTime.Now} {proposal.account.Wallet.Currency}={amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0)} APY={apyPriceDeltaAdjusted.Format(3, 0)}% {result.Trim()}"]);
                 }
             }
             catch (Exception e)
