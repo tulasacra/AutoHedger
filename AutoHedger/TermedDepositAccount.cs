@@ -28,6 +28,8 @@ public class TermedDepositAccount
         OracleKey = oracleKey ?? OracleKeys.Keys[wallet.Currency];
     }
 
+    public DateTime? StalePremiumsTimestamp { get; set; }
+
     public static async Task<TermedDepositAccount[]> Get(List<WalletConfig> wallets)
     {
         List<Task<TermedDepositAccount>> tasks = new(wallets.Count);

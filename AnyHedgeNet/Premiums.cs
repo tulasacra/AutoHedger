@@ -50,6 +50,7 @@ namespace AnyHedgeNet
                                             PremiumInfo = duration.Value,
                                             Yield = yieldInPercent,
                                             Apy = YieldToApy(yieldInPercent, durationInDays),
+                                            Timestamp = DateTimeOffset.FromUnixTimeSeconds(currencyData.Value.Timestamp).DateTime
                                         };
                                     }))))
                         .ToList();
@@ -123,7 +124,8 @@ namespace AnyHedgeNet
         public PremiumData PremiumInfo;
         public decimal Yield;
         public decimal Apy;
-        
+
+        public DateTime Timestamp;
         public string CurrencyOracleKey;
         public bool BestApyForAmount;
 

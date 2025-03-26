@@ -202,6 +202,11 @@ namespace AutoHedger
                 Console.WriteLine("Any other answer returns to main screen.");
                 var answer = Console.ReadLine();
                 if (answer.ToUpper() == "YES")
+                var worseYieldThanExpected = yield < proposal.bestPremiumDataItem.Item.Yield;
+                if (worseYieldThanExpected)
+                {
+                    proposal.account.StalePremiumsTimestamp = proposal.bestPremiumDataItem.Item.Timestamp;
+                }
                 {
                     var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                         proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
@@ -296,6 +301,19 @@ namespace AutoHedger
                     DisplayPremiumsData(premiumDataPlus, priceDelta);
                 }
             }
+
+            if (premiumData.First().Timestamp == account.StalePremiumsTimestamp)
+            {
+                Console.WriteLine($"Stale premiums timestamp: {account.StalePremiumsTimestamp}");
+                return null;
+            }
+
+            return GetTakerContractProposal(account, premiumDataFiltered);
+        }
+
+        private static TakerContractProposal? GetTakerContractProposal(TermedDepositAccount account, List<PremiumDataItemPlus> premiumDataFiltered)
+        {
+            decimal? walletBalanceBch = account.WalletBalanceBch;
 
             TakerContractProposal? takerContractProposal = null;
             if (walletBalanceBch > AppSettings.MinimumContractSizeBch && premiumDataFiltered.Any())
