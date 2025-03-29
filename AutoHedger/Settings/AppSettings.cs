@@ -25,7 +25,8 @@ namespace AutoHedger
             {
                 Currency = Enum.Parse<Currency>(x["Currency"]),
                 Address = x["Address"],
-                PrivateKeyWIF = x["PrivateKeyWIF"]
+                PrivateKeyWIF = x["PrivateKeyWIF"],
+                AutoMode = x["AutoMode"] != null ? Boolean.Parse(x["AutoMode"]) : false,
             })
             .ToList();
     }
@@ -58,5 +59,6 @@ namespace AutoHedger
         }
 
         public bool HasAddress => !string.IsNullOrEmpty(_address) && _address != "bitcoincash:";
+        public bool AutoMode { get; set; }
     }
 }

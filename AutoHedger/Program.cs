@@ -95,6 +95,11 @@ namespace AutoHedger
                     var takerContractProposal = await DisplayData(account, transactions, contracts, premiumData.Where(x => x.CurrencyOracleKey == account.OracleKey).ToList());
                     if (takerContractProposal != null && !string.IsNullOrEmpty(account.Wallet.PrivateKeyWIF))
                     {
+                        if (takerContractProposal.account.Wallet.AutoMode)
+                        {
+                            DisplayContractProposal(takerContractProposal);
+                            return;
+                        }
                         contractProposals.Add(takerContractProposal);
                     }
                 }
@@ -198,15 +203,33 @@ namespace AutoHedger
                 Widgets.DisplayTable(rows);
 
                 Console.WriteLine();
-                Console.WriteLine("To fund the contract type 'yes'.");
-                Console.WriteLine("Any other answer returns to main screen.");
-                var answer = Console.ReadLine();
-                if (answer.ToUpper() == "YES")
+                string? answer = null;
+                var autoMode = proposal.account.Wallet.AutoMode;
                 var worseYieldThanExpected = yield < proposal.bestPremiumDataItem.Item.Yield;
                 if (worseYieldThanExpected)
                 {
                     proposal.account.StalePremiumsTimestamp = proposal.bestPremiumDataItem.Item.Timestamp;
                 }
+                
+                if (!autoMode)
+                {
+                    Console.WriteLine("To fund the contract type 'yes'.");
+                    Console.WriteLine("Any other answer returns to main screen.");
+                    answer = Console.ReadLine();
+                }
+                else if (worseYieldThanExpected)
+                {
+                    Console.WriteLine("Returns to main screen in 10s ..");
+                    await Task.Delay(TimeSpan.FromSeconds(10));                    
+                }
+                else
+                {
+                    Console.WriteLine("Autofunded in 15s ..");
+                    await Task.Delay(TimeSpan.FromSeconds(15));
+                }
+
+                if (autoMode && !worseYieldThanExpected ||
+                    answer?.ToUpper() == "YES")
                 {
                     var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                         proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
@@ -214,10 +237,13 @@ namespace AutoHedger
                         proposal.bestPremiumDataItem.Item.DurationSeconds,
                         makerContractPoposal);
                     Console.WriteLine(result);
-                    Console.WriteLine("[Enter] returns to main screen.");
-                    Console.ReadLine();
                     File.AppendAllLines("_transaction_log.txt", 
                         [$"{DateTime.Now} {proposal.account.Wallet.Currency}={amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0)} APY={apyPriceDeltaAdjusted.Format(3, 0)}% {result.Trim()}"]);
+                    if (!autoMode)
+                    {
+                        Console.WriteLine("[Enter] returns to main screen.");
+                        Console.ReadLine();
+                    }
                 }
             }
             catch (Exception e)
