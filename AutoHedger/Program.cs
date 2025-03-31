@@ -205,7 +205,7 @@ namespace AutoHedger
                 Console.WriteLine();
                 string? answer = null;
                 var autoMode = proposal.account.Wallet.AutoMode;
-                var worseYieldThanExpected = yield < proposal.bestPremiumDataItem.Item.Yield;
+                var worseYieldThanExpected = Math.Round(yield, 2) < proposal.bestPremiumDataItem.Item.Yield || apyPriceDeltaAdjusted < AppSettings.MinimumApy;
                 if (worseYieldThanExpected)
                 {
                     proposal.account.StalePremiumsTimestamp = proposal.bestPremiumDataItem.Item.Timestamp;
