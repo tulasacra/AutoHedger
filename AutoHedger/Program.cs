@@ -237,8 +237,16 @@ namespace AutoHedger
                         proposal.bestPremiumDataItem.Item.DurationSeconds,
                         makerContractPoposal);
                     Console.WriteLine(result);
-                    File.AppendAllLines("_transaction_log.txt", 
-                        [$"{DateTime.Now} {proposal.account.Wallet.Currency}={amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0)} APY={apyPriceDeltaAdjusted.Format(3, 0)}% {result.Trim()}"]);
+                    
+                    StringBuilder logBuilder = new(300);
+                    logBuilder.Append(DateTime.Now);
+                    logBuilder.Append($" {proposal.account.Wallet.Currency}={amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0)}");
+                    logBuilder.Append($" days={days.Format(1, 0)}");
+                    logBuilder.Append($" yield={yield.Format(3, 0)}%");
+                    logBuilder.Append($" ApyDeltaAdjusted={apyPriceDeltaAdjusted.Format(3, 0)}%");
+                    logBuilder.AppendLine($" {result.Trim()}");
+                    File.AppendAllText("_transaction_log.txt", logBuilder.ToString());
+                    
                     if (!autoMode)
                     {
                         Console.WriteLine("[Enter] returns to main screen.");
