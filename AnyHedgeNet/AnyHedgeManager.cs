@@ -243,7 +243,10 @@ public class AnyHedgeManager
             .ToList());
         foreach (var tx in newTransactions.Where(x=>x.PreFundingTxId != null))
         {
-            tx.PreFundingAddress = AddBchPrefix(prefundingTxs.First(x=>tx.PreFundingTxId! == x.TxId).Inputs.First().Recipient);
+            var prefundingTx = prefundingTxs.First(x=>tx.PreFundingTxId! == x.TxId);
+            // Blockchair sometimes doesnt show any inputs, so check for change address as a fallback 
+            var preFundingAddress = prefundingTx.Inputs.FirstOrDefault()?.Recipient ?? prefundingTx.Outputs[1].Recipient; 
+            tx.PreFundingAddress = AddBchPrefix(preFundingAddress);
         }
 
         // add newTransactions to those from cache and filter out null/empty (transactions that are not contract fundings) 
