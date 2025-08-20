@@ -141,6 +141,7 @@ namespace AutoHedger
             try
             {
                 Console.Clear();
+                Console.WriteLine(DateTime.Now);
                 Console.WriteLine(proposal);
 
                 var makerContractPoposal = await AnyHedge.ProposeContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
@@ -187,6 +188,18 @@ namespace AutoHedger
                     ],
                     //["Total fee:     ", $"{0}", $"{totalFeeBch.Format()} BCH"],
                     [
+                        "LP fee:                ",
+                        $"{proposal.bestPremiumDataItem.Item.PremiumInfo.LiquidityPremium.Format(3)} %",
+                        $"{liquidityFee} SAT",
+                        ""
+                    ],
+                    [
+                        "SS fee:                ",
+                        $"{proposal.bestPremiumDataItem.Item.PremiumInfo.SettlementServiceFee.Format(3)} %",
+                        $"{settlementFee} SAT",
+                        ""
+                    ],
+                    [
                         "Yield:                 ",
                         $"{proposal.bestPremiumDataItem.Item.Yield.Format(3)} %",
                         $"{yield.Format(3)} %",
@@ -224,13 +237,15 @@ namespace AutoHedger
                 }
                 else
                 {
-                    Console.WriteLine("Autofunded in 15s ..");
-                    await Task.Delay(TimeSpan.FromSeconds(15));
+                    const int delay = 20;
+                    Console.WriteLine($"Autofunded in {delay}s ..");
+                    await Task.Delay(TimeSpan.FromSeconds(delay));
                 }
 
                 if (autoMode && !worseYieldThanExpected ||
                     answer?.ToUpper() == "YES")
                 {
+                    Console.WriteLine("Funding contract ..");
                     var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                         proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
                         proposal.account.OracleKey,
