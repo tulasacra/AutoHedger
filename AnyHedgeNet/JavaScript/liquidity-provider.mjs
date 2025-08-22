@@ -101,7 +101,7 @@ const ProposeContract = async function(TAKER_BB_WIF) {
 	const {liquidityProvidersMutualRedemptionPublicKey, liquidityProvidersPayoutAddress, availableLiquidityInSatoshis} = prepareContractPositionResponse;
 
 	// Collect all the parameters that we need to create a contract
-	const [startingOracleMessage, startingOracleSignature] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host);
+	const [startingOracleMessage, startingOracleSignature] = await fetchCurrentOracleMessageAndSignature(ORACLE_PUBLIC_KEY, oracleRelay.host, oracleRelay.port);
 	const [_takerPrivateKey, takerMutualRedeemPublicKey, _takerPayoutAddress] = await parseWIF(TAKER_BB_WIF);
 
 	// Allow mutual redemptions for this contract.

@@ -1,7 +1,8 @@
 {
   "dependencies": {
-    "@generalprotocols/anyhedge": "2.0.0-next.7706865010",
     "@bitauth/libauth": "2.0.0-alpha.8",
+    "@generalprotocols/anyhedge": "2.0.0-next.7706865010",
+    "@generalprotocols/oracle-client": "^0.0.1",
     "cashscript": "0.9.2"
   }
 }

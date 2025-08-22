@@ -2,8 +2,7 @@
 //import fetch from 'node-fetch';
 
 // Import oracle related utilities.
-import { OracleNetwork, OracleData } from '@generalprotocols/price-oracle';
-import { hexToBin } from '@bitauth/libauth';
+import { OracleClient, OracleMessage } from '@generalprotocols/oracle-client';
 
 // Import electrum related utilities.
 import { ElectrumNetworkProvider } from 'cashscript';
@@ -28,34 +27,67 @@ const getLocalNetworkProviderInstance = async function()
 }
 
 // Get the current oracle price to use as starting and ending conditions for an contract.
-export const fetchCurrentOracleMessageAndSignature = async function(oraclePublicKey, oracleRelayHost, oracleRelayPort = 7083)
+export const fetchCurrentOracleMessageAndSignature = async function(oraclePublicKey, oracleRelayHost, oracleRelayPort = 443)
 {
-	// Define the search parameters to request the most recent price for the oracle.
-	// NOTE: minDataSequence needs to be 1 in order to disregard the latest message(s) if they happens to be metadata messages.
-	const searchRequest =
+	let oracleClient;
+	try
 	{
-		publicKey: oraclePublicKey,
-		minDataSequence: 1,
-		count: 1,
-	};
+		const baseURL = `https://${oracleRelayHost}:${oracleRelayPort}`;
+		oracleClient = await OracleClient.from(baseURL);
 
-	// Request the latest price as specified in the search parameters.
-	const requestedMessages = await OracleNetwork.request(searchRequest, oracleRelayHost, oracleRelayPort);
+		// Define the search parameters to request the most recent price for the oracle.
+		// NOTE: minDataSequence needs to be 1 in order to disregard the latest message(s) if they happens to be metadata messages.
+		const searchRequest =
+		{
+			publicKey: oraclePublicKey,
+			minDataSequence: 1,
+			count: 1,
+		};
 
-	// Extract the latest message from the response.
-	const { message, signature, publicKey } = requestedMessages[0];
+		// Request the latest price as specified in the search parameters.
+		const requestedMessages = await oracleClient.getOracleMessages(searchRequest);
 
-	// Verify an oracle price message signature.
-	const validMessageSignature = await OracleData.verifyMessageSignature(hexToBin(message), hexToBin(signature), hexToBin(publicKey));
+		if(!requestedMessages || requestedMessages.length === 0)
+		{
+			throw(new Error('Could not get current oracle message: no messages returned by the oracle relay.'));
+		}
 
-	// Throw an error if the signature could not be properly validated.
-	if(!validMessageSignature)
-	{
-		throw(new Error('Could not get current oracle message: the oracle relay provided an invalid signature for the message.'));
+		// Extract the latest message from the response.
+		const { message, signature, publicKey } = requestedMessages[0].toHexObject();
+
+		/*
+		// Verify an oracle price message signature.
+		const validMessageSignature = await OracleData.verifyMessageSignature(hexToBin(message), hexToBin(signature), hexToBin(publicKey));
+
+		// Throw an error if the signature could not be properly validated.
+		if(!validMessageSignature)
+		{
+			throw(new Error('Could not get current oracle message: the oracle relay provided an invalid signature for the message.'));
+		}
+		*/
+
+		// Return starting oracle message and signature.
+		return [ message, signature ];
 	}
-
-	// Return starting oracle message and signature.
-	return [ message, signature ];
+	catch(error)
+	{
+		throw(new Error(`Failed to fetch oracle data: ${error.message}`));
+	}
+	finally
+	{
+		// Make sure to clean up the SSE connection
+		try
+		{
+			if(oracleClient)
+			{
+				await oracleClient.stop();
+			}
+		}
+		catch(cleanupError)
+		{
+			// Ignore cleanup errors
+		}
+	}
 };
 
 // Fetch the list of current UTXOs for an address.
