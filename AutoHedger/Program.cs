@@ -253,14 +253,17 @@ namespace AutoHedger
                         makerContractPoposal);
                     Console.WriteLine(result);
                     
-                    StringBuilder logBuilder = new(300);
-                    logBuilder.Append(DateTime.Now);
-                    logBuilder.Append($" {proposal.account.Wallet.Currency}={amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0)}");
-                    logBuilder.Append($" days={days.Format(1, 0)}");
-                    logBuilder.Append($" yield={yield.Format(3, 0)}%");
-                    logBuilder.Append($" ApyDeltaAdjusted={apyPriceDeltaAdjusted.Format(3, 0)}%");
-                    logBuilder.AppendLine($" {result.Trim()}");
-                    File.AppendAllText("_transaction_log.txt", logBuilder.ToString());
+                    const string header = "datetime\tBCH\tamount\tasset\tdays\tyield\tApyDeltaAdjusted\tresult";
+                    TxLog.Log(header,
+                        DateTime.Now,
+                        amountBch.Format(),
+                        amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0),
+                        proposal.account.Wallet.Currency,
+                        days.Format(1, 0),
+                        $"{yield.Format(3, 0)}%",
+                        $"{apyPriceDeltaAdjusted.Format(3, 0)}%",
+                        result.Trim()
+                    );
                     
                     if (!autoMode)
                     {
