@@ -244,8 +244,7 @@ public class AnyHedgeManager
         foreach (var tx in newTransactions.Where(x=>x.PreFundingTxId != null))
         {
             var prefundingTx = prefundingTxs.First(x=>tx.PreFundingTxId! == x.TxId);
-            // Blockchair sometimes doesnt show any inputs, so check for change address as a fallback 
-            var preFundingAddress = prefundingTx.Inputs.FirstOrDefault()?.Recipient ?? prefundingTx.Outputs[1].Recipient; 
+            var preFundingAddress = prefundingTx.Inputs.First().Recipient; 
             tx.PreFundingAddress = AddBchPrefix(preFundingAddress);
         }
 

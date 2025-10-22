@@ -153,6 +153,12 @@ public static class BlockchairApi
                 Outputs = outputs
             };
 
+            if (transaction.Inputs == null || transaction.Inputs.Count == 0 ||
+                transaction.Outputs == null || transaction.Outputs.Count == 0)
+            {
+                throw new Exception($"Transaction {txid} returned with empty inputs or outputs");
+            }
+
             transactions.Add(transaction);
         }
 
