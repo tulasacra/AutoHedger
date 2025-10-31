@@ -203,7 +203,10 @@ namespace AutoHedger
                         "Yield:                 ",
                         $"{proposal.bestPremiumDataItem.Item.Yield.Format(3)} %",
                         $"{yield.Format(3)} %",
-                        $"{(proposal.bestPremiumDataItem.Item.Yield == 0 ? "N/A" : (yield / proposal.bestPremiumDataItem.Item.Yield * 100).Format(2))}"
+                        $"{(proposal.bestPremiumDataItem.Item.Yield == 0 ? "N/A" : (proposal.bestPremiumDataItem.Item.Yield < 0 && yield < 0 ?
+                            proposal.bestPremiumDataItem.Item.Yield / yield * 100 :
+                            yield / proposal.bestPremiumDataItem.Item.Yield * 100)
+                            .Format(2))}"
                     ],
                     [
                         "APY, price Δ adjusted: ",
