@@ -359,7 +359,7 @@ namespace AutoHedger
 
             if (premiumData.First().Timestamp == account.StalePremiumsTimestamp)
             {
-                Console.WriteLine($"Stale premiums timestamp: {account.StalePremiumsTimestamp}");
+                Console.WriteLine($"Stale premiums (or less than min desired APY) timestamp: {account.StalePremiumsTimestamp}");
                 return null;
             }
 
