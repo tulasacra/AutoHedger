@@ -66,7 +66,9 @@ namespace AnyHedgeNet
                         item.BestApyForAmount = item.Apy == bestApyForAmount[item.Amount];
                     }
 
-                    result.AddRange(premiumDataItems);
+                    result.AddRange(premiumDataItems
+                        .OrderBy(x => x.DurationDays)
+                        .ThenBy(x => x.Amount));
                 }
             }
 
