@@ -138,6 +138,10 @@ namespace AutoHedger
         {
             timer.Stop();
             Menu.Disable();
+            
+            const string logHeader = "datetime\tBCH\tamount\tasset\tdays\tyield\tApyDeltaAdjusted\tresult";
+            List<object> logItems = [];
+            
             try
             {
                 Console.Clear();
@@ -248,6 +252,17 @@ namespace AutoHedger
                 if (autoMode && !worseYieldThanExpected ||
                     answer?.ToUpper() == "YES")
                 {
+                    logItems =
+                    [
+                        DateTime.Now,
+                        amountBch.Format(),
+                        amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0),
+                        proposal.account.Wallet.Currency,
+                        days.Format(1, 0),
+                        $"{yield.Format(3, 0)}%",
+                        $"{apyPriceDeltaAdjusted.Format(3, 0)}%",
+                    ];
+                    
                     Console.WriteLine("Funding contract ..");
                     var result = await AnyHedge.FundContract(proposal.account.Wallet.Address, proposal.account.Wallet.PrivateKeyWIF,
                         proposal.contractAmountBch * proposal.account.LatestPrice * proposal.account.OracleMetadata.ATTESTATION_SCALING,
@@ -256,17 +271,8 @@ namespace AutoHedger
                         makerContractPoposal);
                     Console.WriteLine(result);
                     
-                    const string header = "datetime\tBCH\tamount\tasset\tdays\tyield\tApyDeltaAdjusted\tresult";
-                    TxLog.Log(header,
-                        DateTime.Now,
-                        amountBch.Format(),
-                        amount.Format(proposal.account.OracleMetadata.AssetDecimals, 0),
-                        proposal.account.Wallet.Currency,
-                        days.Format(1, 0),
-                        $"{yield.Format(3, 0)}%",
-                        $"{apyPriceDeltaAdjusted.Format(3, 0)}%",
-                        result.Trim()
-                    );
+                    logItems.Add(result.Trim());
+                    TxLog.Log(logHeader, logItems);
                     
                     if (!autoMode)
                     {
@@ -278,6 +284,10 @@ namespace AutoHedger
             catch (Exception e)
             {
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
+                
+                logItems.Add($"ERROR: {e.GetType().Name}: {e.Message}");
+                TxLog.Log(logHeader, logItems);
+                
                 Console.WriteLine("[Enter] returns to main screen.");
                 Console.ReadLine();
             }

@@ -173,12 +173,18 @@ public class AnyHedgeManager
         var process = new Process();
         process.StartInfo = startInfo;
         StringBuilder resultBuilder = new();
-        process.OutputDataReceived += (sender, args) => { resultBuilder.AppendLine(args.Data); };
+        StringBuilder errorBuilder = new();
+        process.OutputDataReceived += (sender, args) => { if (args.Data != null) resultBuilder.AppendLine(args.Data); };
+        process.ErrorDataReceived += (sender, args) => { if (args.Data != null) errorBuilder.AppendLine(args.Data); };
         process.Start();
         process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
 
         await process.StandardInput.WriteLineAsync($"{accountPrivateKeyWIF},{privateKeyWIF}");
         process.StandardInput.Close();
+
+        string error;
+        string result;
 
         try
         {
@@ -186,12 +192,13 @@ public class AnyHedgeManager
         }
         catch (TimeoutException)
         {
+            error = errorBuilder.ToString();
             process.Kill();
-            throw new TimeoutException("Process execution timed out.");
+            throw new TimeoutException("Process execution timed out." + error);
         }
 
-        var result = resultBuilder.ToString();
-        var error = await process.StandardError.ReadToEndAsync();
+        result = resultBuilder.ToString();
+        error = errorBuilder.ToString();
 
         if (process.ExitCode != 0)
         {
