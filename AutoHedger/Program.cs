@@ -108,6 +108,17 @@ namespace AutoHedger
                 {
                     Console.WriteLine(delimiterBold);
                     DisplayTotalBalances(accounts);
+                    
+                    var activeContracts = contracts.Where(x => !x.IsSettled).ToList();
+                    if (activeContracts.Count > 0)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine($"Total active contracts: {activeContracts.Count}");
+
+                        var contractWithNearestMaturity = activeContracts.MinBy(x => x.Parameters.MaturityTimestamp);
+                        var maturityUtc = DateTimeOffset.FromUnixTimeSeconds((long)contractWithNearestMaturity.Parameters.MaturityTimestamp).UtcDateTime;
+                        Console.WriteLine($"Nearest contract maturity: {maturityUtc} ({(maturityUtc - DateTime.UtcNow).TotalDays:F2} days)");
+                    }
                 }
             }
             catch (Exception ex)
