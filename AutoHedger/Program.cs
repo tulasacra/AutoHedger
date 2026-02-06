@@ -296,7 +296,7 @@ namespace AutoHedger
             {
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
                 
-                logItems.Add($"ERROR: {e.GetType().Name}: {e.Message}");
+                logItems.Add($"ERROR: {e.GetType().Name}: {e.Message.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ')}");
                 TxLog.Log(logHeader, logItems);
                 
                 Console.WriteLine("[Enter] returns to main screen.");
