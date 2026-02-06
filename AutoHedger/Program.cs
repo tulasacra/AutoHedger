@@ -407,7 +407,7 @@ namespace AutoHedger
                     {
                         feeMultiplier += premiumInfo.LiquidityPremium / 100m;
                     }
-                    const decimal additionalFeeBch = 0.000_010_00m; //miner fees
+                    const decimal additionalFeeBch = 0.000_030_00m; //miner fees for funding+prefunding tx should be below 1k sat, but still 1.5k sat missing error popped
                     
                     if (contractAmountBch * feeMultiplier + additionalFeeBch > walletBalanceBch)
                     {
