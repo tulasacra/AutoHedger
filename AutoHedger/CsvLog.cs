@@ -28,12 +28,17 @@ public class CsvLog
     private string BuildLine(List<object> items)
     {
         StringBuilder logBuilder = new(300);
-        for (int i = 0; i < items.Count; i++)
+
+        // when items count is less than headers, pad from left
+        int columnCount = Math.Max(items.Count, _header.Count);
+        int itemOffset = columnCount - items.Count;
+        
+        for (int i = 0; i < columnCount; i++)
         {
-            string value = items[i]?.ToString() ?? "";
+            string value = i < itemOffset ? "" : items[i - itemOffset]?.ToString() ?? "";
             value = value.Replace('\r', ' ').Replace('\n', ' ').Replace(_separator, ' ');
             logBuilder.Append(value);
-            if (i < items.Count - 1)
+            if (i < columnCount - 1)
                 logBuilder.Append(_separator);
         }
         return logBuilder.ToString();
