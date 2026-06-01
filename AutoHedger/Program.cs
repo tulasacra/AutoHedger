@@ -150,7 +150,8 @@ namespace AutoHedger
             timer.Stop();
             Menu.Disable();
             
-            const string logHeader = "datetime\tBCH\tamount\tasset\tdays\tyield\tApyDeltaAdjusted\tresult";
+            List<object> logHeader = ["datetime", "BCH", "amount", "asset", "days", "yield", "ApyDeltaAdjusted", "result"];
+            CsvLog txLog = new("_transaction_log.csv", logHeader, "\t");
             List<object> logItems = [];
             
             try
@@ -283,7 +284,7 @@ namespace AutoHedger
                     Console.WriteLine(result);
                     
                     logItems.Add(result.Trim());
-                    TxLog.Log(logHeader, logItems);
+                    txLog.Log(logItems);
                     
                     if (!autoMode)
                     {
@@ -297,7 +298,7 @@ namespace AutoHedger
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
                 
                 logItems.Add($"ERROR: {e.GetType().Name}: {e.Message.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ')}");
-                TxLog.Log(logHeader, logItems);
+                txLog.Log(logItems);
                 
                 Console.WriteLine("[Enter] returns to main screen.");
                 Console.ReadLine();
