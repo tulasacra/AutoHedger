@@ -344,7 +344,9 @@ namespace AutoHedger
             if (account.OriginalDeposit > 0)
             {
                 Console.WriteLine(delimiter);
-                Console.WriteLine($"Original deposit: {account.OriginalDeposit.Format(account.OracleMetadata.AssetDecimals)} {account.Wallet.Currency}");
+                Console.Write($"Original deposit: {account.OriginalDeposit.Format(account.OracleMetadata.AssetDecimals)} {account.Wallet.Currency}");
+                Console.WriteLine($"\t\t\tOriginal deposit age: {(account.OriginalDepositWeightedAgeInSeconds/86400m).Format(2, 0)} days");
+                
                 var totalBalance = walletBalance + contractsBalance;
                 var yield = totalBalance - account.OriginalDeposit; 
                 var yieldPercent = (totalBalance / account.OriginalDeposit - 1) * 100;

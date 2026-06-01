@@ -16,6 +16,7 @@ public class TermedDepositAccount
     public decimal? WalletBalance;
     public decimal? WalletBalanceBch;
     public decimal? OriginalDeposit;
+    public decimal? OriginalDepositWeightedAgeInSeconds;
     
     public decimal? ContractsBalanceBch = null;
     public decimal? ContractsBalance = null;
@@ -66,8 +67,17 @@ public class TermedDepositAccount
             .Select(x => x.ContractAddress)
             .ToList();
         var originalDepositContracts = contracts
-            .Where(x => originalDepositContractIds.Contains(x.Address) && x.Parameters.OraclePublicKey == oracleKey);
+            .Where(x => originalDepositContractIds.Contains(x.Address) && x.Parameters.OraclePublicKey == oracleKey)
+            .ToList();
         this.OriginalDeposit = originalDepositContracts.Sum(x => x.Metadata.NominalUnits) / oracleMetadata.ATTESTATION_SCALING;
+        
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        this.OriginalDepositWeightedAgeInSeconds = originalDepositContracts
+            .Select(c => (nominal: c.Metadata.NominalUnits, ageSeconds: (decimal)(now - (long)c.Parameters.StartTimestamp)))
+            .Aggregate(
+                (totalWeighted: 0m, totalNominal: 0m),
+                (acc, x) => (acc.totalWeighted + x.nominal * x.ageSeconds, acc.totalNominal + x.nominal),
+                acc => acc.totalNominal != 0 ? acc.totalWeighted / acc.totalNominal : (decimal?)null);
     }
     
     private static decimal? CalculateFifoCost(decimal? walletBalance, List<Contract> settledContracts, OracleMetadata oracleMetadata)
