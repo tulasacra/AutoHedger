@@ -151,7 +151,7 @@ namespace AutoHedger
             Menu.Disable();
             
             List<object> logHeader = ["datetime", "BCH", "amount", "asset", "days", "yield", "ApyDeltaAdjusted", "result"];
-            CsvLog txLog = new("_transaction_log.csv", logHeader, "\t");
+            CsvLog txLog = new("_transaction_log.csv", logHeader, '\t');
             List<object> logItems = [];
             
             try
@@ -297,7 +297,7 @@ namespace AutoHedger
             {
                 Widgets.WriteLine($"Something went wrong {e}", ConsoleColor.Red);
                 
-                logItems.Add($"ERROR: {e.GetType().Name}: {e.Message.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ')}");
+                logItems.Add($"ERROR: {e.GetType().Name}: {e.Message}");
                 txLog.Log(logItems);
                 
                 Console.WriteLine("[Enter] returns to main screen.");

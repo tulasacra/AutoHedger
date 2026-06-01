@@ -6,9 +6,9 @@ public class CsvLog
 {
     private readonly string _logFile;
     private readonly List<object> _header;
-    private readonly string _separator;
+    private readonly char _separator;
 
-    public CsvLog(string logFile, List<object> header, string separator)
+    public CsvLog(string logFile, List<object> header, char separator)
     {
         _logFile = logFile;
         _header = header;
@@ -30,7 +30,9 @@ public class CsvLog
         StringBuilder logBuilder = new(300);
         for (int i = 0; i < items.Count; i++)
         {
-            logBuilder.Append(items[i]);
+            string value = items[i]?.ToString() ?? "";
+            value = value.Replace('\r', ' ').Replace('\n', ' ').Replace(_separator, ' ');
+            logBuilder.Append(value);
             if (i < items.Count - 1)
                 logBuilder.Append(_separator);
         }
