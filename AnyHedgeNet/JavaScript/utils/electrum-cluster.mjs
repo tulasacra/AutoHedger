@@ -1,5 +1,5 @@
 import { ElectrumCluster, ElectrumTransport, ClusterOrder } from 'electrum-cash';
-import { canonicalize } from './electrum-integrity.mjs';
+import { canonicalize, isElectrumTxList } from './electrum-integrity.mjs';
 
 // electrum-cash default is 120s; blocked :50004 hosts then stall the whole cluster.
 // Healthy servers connect in <200ms — 5s leaves headroom for slow links.
@@ -7,8 +7,8 @@ const CONNECTION_TIMEOUT_MS = 5000;
 
 let integrityPatchInstalled = false;
 
-// electrum-cash votes with JSON.stringify(response). Rostrum adds UTXO fields Fulcrum omits.
-// Rewrite stringify during Cluster.request so those extras don't break confidence.
+// electrum-cash votes with JSON.stringify(response). Normalize UTXO/history lists so
+// Rostrum extras and differing sort order don't break confidence.
 function installElectrumIntegrityPatch()
 {
 	if(integrityPatchInstalled)
@@ -23,7 +23,7 @@ function installElectrumIntegrityPatch()
 		const nativeStringify = JSON.stringify.bind(JSON);
 		JSON.stringify = (value, replacer, space) =>
 		{
-			if(isUtxoList(value))
+			if(isElectrumTxList(value))
 			{
 				return nativeStringify(canonicalize(value), replacer, space);
 			}
@@ -38,16 +38,6 @@ function installElectrumIntegrityPatch()
 			JSON.stringify = nativeStringify;
 		}
 	};
-}
-
-function isUtxoList(value)
-{
-	return Array.isArray(value)
-		&& value.length > 0
-		&& value[0] !== null
-		&& typeof value[0] === 'object'
-		&& Object.prototype.hasOwnProperty.call(value[0], 'tx_hash')
-		&& Object.prototype.hasOwnProperty.call(value[0], 'tx_pos');
 }
 
 // :443 servers first — many networks block the traditional Electrum ports.
