@@ -31,6 +31,12 @@
         <None Update="JavaScript\utils\anyhedge.mjs">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
+        <None Update="JavaScript\utils\electrum-cluster.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="JavaScript\utils\electrum-integrity.mjs">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
         <None Update="JavaScript\utils\network.mjs">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
