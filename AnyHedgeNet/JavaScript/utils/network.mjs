@@ -6,6 +6,7 @@ import { OracleClient, OracleMessage } from '@generalprotocols/oracle-client';
 
 // Import electrum related utilities.
 import { ElectrumNetworkProvider } from 'cashscript';
+import { createMainnetElectrumCluster } from './electrum-cluster.mjs';
 
 // Load support for bigint in JSON
 import { decodeExtendedJson, encodeExtendedJson } from '@generalprotocols/anyhedge';
@@ -19,7 +20,7 @@ const getLocalNetworkProviderInstance = async function()
 	// Create a local instance of the ElectrumNetworkProvider, if necessary
 	if(!electrumNetworkProvider)
 	{
-		electrumNetworkProvider = new ElectrumNetworkProvider();
+		electrumNetworkProvider = new ElectrumNetworkProvider(undefined, createMainnetElectrumCluster());
 	}
 
 	// Return the local instance of the network provider.

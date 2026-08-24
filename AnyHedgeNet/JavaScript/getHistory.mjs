@@ -1,4 +1,4 @@
-import { ElectrumCluster, ElectrumTransport, ClusterOrder } from 'electrum-cash';
+import { createMainnetElectrumCluster } from './utils/electrum-cluster.mjs';
 
 const address = process.argv[2];
 
@@ -15,14 +15,7 @@ class ElectrumNetworkProvider {
         }
 
         if (network === 'mainnet') {
-            // Initialise a 2-of-3 Electrum Cluster with 6 reliable hardcoded servers
-            this.electrum = new ElectrumCluster('AnyHedge Application', '1.4.1', 2, 3, ClusterOrder.PRIORITY);
-            this.electrum.addServer('bch.imaginary.cash', 50004, ElectrumTransport.WSS.Scheme, false);
-            this.electrum.addServer('blackie.c3-soft.com', 50004, ElectrumTransport.WSS.Scheme, false);
-            this.electrum.addServer('electroncash.de', 60002, ElectrumTransport.WSS.Scheme, false);
-            this.electrum.addServer('electroncash.dk', 50004, ElectrumTransport.WSS.Scheme, false);
-            this.electrum.addServer('bch.loping.net', 50004, ElectrumTransport.WSS.Scheme, false);
-            this.electrum.addServer('electrum.imaginary.cash', 50004, ElectrumTransport.WSS.Scheme, false);
+            this.electrum = createMainnetElectrumCluster();
         } else {
             throw new Error(`Tried to instantiate an ElectrumNetworkProvider for unsupported network ${network}`);
         }
