@@ -24,18 +24,13 @@ export function canonicalize(value)
 	{
 		if(isUtxoShape(value))
 		{
-			const utxo =
-			{
+			// Omit token_data: Rostrum drops it, Fulcrum keeps it.
+			return {
 				height: value.height,
 				tx_hash: value.tx_hash,
 				tx_pos: value.tx_pos,
 				value: value.value,
 			};
-			if(value.token_data !== undefined)
-			{
-				utxo.token_data = canonicalize(value.token_data);
-			}
-			return utxo;
 		}
 
 		if(isHistoryShape(value))
