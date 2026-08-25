@@ -8,7 +8,8 @@ const CONNECTION_TIMEOUT_MS = 5000;
 let integrityPatchInstalled = false;
 
 // electrum-cash votes with JSON.stringify(response). Normalize UTXO/history lists so
-// Rostrum extras and differing sort order don't break confidence.
+// Rostrum extras, token-UTXO membership, and sort order don't break confidence.
+// Patch once globally — per-request wrap/restore races when several getUtxos run in parallel.
 function installElectrumIntegrityPatch()
 {
 	if(integrityPatchInstalled)
@@ -17,26 +18,14 @@ function installElectrumIntegrityPatch()
 	}
 	integrityPatchInstalled = true;
 
-	const originalRequest = ElectrumCluster.prototype.request;
-	ElectrumCluster.prototype.request = async function patchedRequest(...args)
+	const nativeStringify = JSON.stringify.bind(JSON);
+	JSON.stringify = (value, replacer, space) =>
 	{
-		const nativeStringify = JSON.stringify.bind(JSON);
-		JSON.stringify = (value, replacer, space) =>
+		if(isElectrumTxList(value))
 		{
-			if(isElectrumTxList(value))
-			{
-				return nativeStringify(canonicalize(value), replacer, space);
-			}
-			return nativeStringify(value, replacer, space);
-		};
-		try
-		{
-			return await originalRequest.apply(this, args);
+			return nativeStringify(canonicalize(value), replacer, space);
 		}
-		finally
-		{
-			JSON.stringify = nativeStringify;
-		}
+		return nativeStringify(value, replacer, space);
 	};
 }
 

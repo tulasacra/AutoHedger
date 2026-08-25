@@ -1,11 +1,19 @@
 // electrum-cash confidence compares JSON.stringify(response) exactly.
-// Servers disagree on extra fields (Rostrum) and list order (history) — normalize both.
+// Servers disagree on extra fields (Rostrum), list order (history), and whether
+// CashToken UTXOs appear in listunspent (Rostrum includes them, Fulcrum omits).
 
 export function canonicalize(value)
 {
 	if(Array.isArray(value))
 	{
-		const items = value.map(canonicalize);
+		let items = value;
+		if(items.length > 0 && isUtxoShape(items[0]))
+		{
+			// Drop token UTXOs before field-stripping so Rostrum/Fulcrum lists match.
+			items = items.filter((utxo) => !isTokenUtxo(utxo));
+		}
+
+		items = items.map(canonicalize);
 		if(items.length > 0 && isUtxoShape(items[0]))
 		{
 			items.sort((a, b) => `${a.tx_hash}:${a.tx_pos}`.localeCompare(`${b.tx_hash}:${b.tx_pos}`));
@@ -24,7 +32,7 @@ export function canonicalize(value)
 	{
 		if(isUtxoShape(value))
 		{
-			// Omit token_data: Rostrum drops it, Fulcrum keeps it.
+			// Omit Rostrum-only extras (has_token, outpoint_hash, token_data).
 			return {
 				height: value.height,
 				tx_hash: value.tx_hash,
@@ -50,6 +58,13 @@ export function canonicalize(value)
 	}
 
 	return value;
+}
+
+function isTokenUtxo(value)
+{
+	return value !== null
+		&& typeof value === 'object'
+		&& (value.has_token === true || value.token_data != null);
 }
 
 // listunspent entries
