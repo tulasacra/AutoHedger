@@ -85,9 +85,9 @@ namespace AutoHedger
                 await Task.WhenAll(tasks);
                 Console.WriteLine(" ..DONE");
                     
-                var transactions = await transactionsTask;
-                var contracts = await contractsTask;
-                var premiumData = await premiumDataTask;
+                var transactions = transactionsTask.Result;
+                var contracts = contractsTask.Result;
+                var premiumData = premiumDataTask.Result;
 
                 foreach (var account in accounts)
                 {
