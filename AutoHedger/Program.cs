@@ -70,17 +70,17 @@ namespace AutoHedger
                 
                 var tasks = new List<Task>(4);
                 var transactionsTask = AnyHedge.GetTransactions();
-                var contractsTask = transactionsTask.ContinueWith(task =>
+                var contractsTask = transactionsTask.ContinueWithIfOk(task =>
                 {
                     Console.Write(" ..Transactions");
                     return AnyHedge.GetContracts(task.Result.Select(x=>x.ContractAddress).ToList());
                 }).Unwrap();
-                tasks.Add(contractsTask.ContinueWith(_ => Console.Write(" ..Contracts")));
+                tasks.Add(contractsTask.ContinueWithIfOk(_ => Console.Write(" ..Contracts")));
                 const string counterLeverage = "5"; //only check 20% hedge
                 var premiumDataTask = Premiums.GetPremiums(counterLeverage, 5);
-                tasks.Add(premiumDataTask.ContinueWith(_ => Console.Write(" ..Premiums")));
-                tasks.Add(TermedDepositAccount.UpdateLatestPrices(accounts).ContinueWith(_ => Console.Write(" ..Latest prices")));
-                tasks.Add(TermedDepositAccount.UpdateWalletBalances(accounts).ContinueWith(_ => Console.Write(" ..Wallet balances")));
+                tasks.Add(premiumDataTask.ContinueWithIfOk(_ => Console.Write(" ..Premiums")));
+                tasks.Add(TermedDepositAccount.UpdateLatestPrices(accounts).ContinueWithIfOk(_ => Console.Write(" ..Latest prices")));
+                tasks.Add(TermedDepositAccount.UpdateWalletBalances(accounts).ContinueWithIfOk(_ => Console.Write(" ..Wallet balances")));
                 
                 await Task.WhenAll(tasks);
                 Console.WriteLine(" ..DONE");
